@@ -5,6 +5,7 @@ import { PitchDetector } from './pitch.js';
 import { renderScore } from './score.js';
 import { SONGS } from './songs.js';
 import { renderGuitar } from './guitar.js';
+import { Game } from './game.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,6 +30,8 @@ const settings = Object.assign(
     sens: 0.5,
     latency: 60,
     echo: false,
+    gameBpm: 40,
+    gameBest: {}, // record per combinatie van noten
   },
   safeRead(SETTINGS_KEY),
 );
@@ -217,6 +220,14 @@ function usingRecording() { return !!songAudio(); }
 
 function updateTempoUI() {
   const t = $('tempo');
+  if (settings.tab === 'game') {
+    t.min = 15; t.max = 120; t.step = 1;
+    t.value = settings.gameBpm;
+    $('tempoOut').textContent = `${settings.gameBpm} noten/min`;
+    $('waitWrap').classList.add('disabled');
+    t.previousElementSibling.firstChild.textContent = 'Snelheid ';
+    return;
+  }
   if (usingRecording()) {
     t.min = 50; t.max = 130; t.step = 5;
     t.value = settings.speed;
@@ -343,7 +354,9 @@ function onFrame(f) {
     const nm = nameByWritten.get(written);
     $('heardWhere').textContent = nm ? describePosition(nm) : '';
     $('needle').style.left = 50 + Math.max(-50, Math.min(50, f.cents)) + '%';
-    const exp = curIdx >= 0 && piece.notes[curIdx] && !isRest(piece.notes[curIdx]) ? soundingMidi(piece.notes[curIdx].p) : null;
+    const gt = game.running ? game.target() : null;
+    const exp = gt ? soundingMidi(gt.p)
+      : curIdx >= 0 && piece.notes[curIdx] && !isRest(piece.notes[curIdx]) ? soundingMidi(piece.notes[curIdx].p) : null;
     $('heardName').classList.toggle('match', exp === f.midi);
   } else if (f.level < 0.05) {
     $('heardName').textContent = '–';
@@ -353,6 +366,7 @@ function onFrame(f) {
 }
 
 function onNote(ev) {
+  if (game.running) return game.onNote(ev);
   if (!run || !piece || run.demo) return;
   if (run.wait) return judgeWait(ev);
   judgeTimed(ev);
@@ -428,6 +442,40 @@ function judgeWait(ev) {
   } else if (states[i] !== 'bad') {
     setState(i, 'bad', `fout: ${solfege(ev.midi + 12)}`);
   }
+}
+
+// ---------- spel ----------
+const game = new Game({
+  container: $('game'),
+  hud: { streak: $('gStreak'), best: $('gBest'), total: $('gTotal'), msg: $('gMsg') },
+  ctx: audioCtx,
+  click,
+  setExpect: (midis) => detector?.setExpect(midis),
+  onTarget: (p) => {
+    $('expectName').textContent = p ? solfegeOf(p) : '–';
+    $('expectWhere').textContent = p ? describePosition(p) : '';
+  },
+});
+const selectionKey = () => [...settings.selection].sort().join(',');
+game.onBest = (best) => { settings.gameBest[selectionKey()] = best; save(); };
+
+function configureGame() {
+  game.bpm = settings.gameBpm;
+  game.metro = settings.metro;
+  game.showNames = settings.names;
+  game.showFingers = settings.fingers;
+  game.best = settings.gameBest[selectionKey()] || 0;
+  game.setPool(PRACTICE_NOTES.filter((n) => settings.selection.includes(n)));
+  game.updateHud();
+}
+
+async function startGame() {
+  stop();
+  await ensureMic();
+  configureGame();
+  game.start();
+  $('startBtn').textContent = '■ Stop';
+  $('startBtn').classList.add('stop');
 }
 
 // ---------- start / stop ----------
@@ -541,6 +589,11 @@ async function playDemo() {
 }
 
 function stop() {
+  if (game.running) {
+    game.stop();
+    $('startBtn').textContent = '▶ Start';
+    $('startBtn').classList.remove('stop');
+  }
   if (!run) return;
   clearInterval(run.timer);
   cancelAnimationFrame(run.raf);
@@ -695,7 +748,8 @@ function buildNoteChips() {
       settings.selection = [...s];
       save();
       b.classList.toggle('on');
-      makeExercise();
+      if (settings.tab === 'game') { if (!game.running) configureGame(); }
+      else makeExercise();
     };
     wrap.appendChild(b);
   });
@@ -748,7 +802,10 @@ function bindUI() {
 
   // tempo
   $('tempo').oninput = (e) => {
-    if (usingRecording()) {
+    if (settings.tab === 'game') {
+      settings.gameBpm = +e.target.value;
+      game.bpm = settings.gameBpm; // mag tijdens het spelen veranderen
+    } else if (usingRecording()) {
       settings.speed = +e.target.value;
       if (run?.audio) {
         stop();
@@ -766,11 +823,11 @@ function bindUI() {
     $(id).checked = settings[key];
     $(id).onchange = (e) => { settings[key] = e.target.checked; save(); after?.(); };
   };
-  toggle('metroToggle', 'metro');
+  toggle('metroToggle', 'metro', () => { game.metro = settings.metro; });
   toggle('waitToggle', 'wait', () => stop());
-  toggle('namesToggle', 'names', draw);
+  toggle('namesToggle', 'names', redraw);
   toggle('echoToggle', 'echo', () => { stop(); detector?.stop(); detector = null; });
-  toggle('fingersToggle', 'fingers', draw);
+  toggle('fingersToggle', 'fingers', redraw);
 
   $('difficulty').value = String(settings.tol);
   $('difficulty').onchange = (e) => { settings.tol = +e.target.value; save(); };
@@ -785,33 +842,55 @@ function bindUI() {
     save();
   };
 
-  $('startBtn').onclick = () => (run && !run.demo ? stop() : start());
+  $('startBtn').onclick = () => {
+    if (settings.tab === 'game') return game.running ? stop() : startGame();
+    return run && !run.demo ? stop() : start();
+  };
   $('demoBtn').onclick = () => (run?.demo ? stop() : playDemo());
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !['INPUT', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) {
       e.preventDefault();
-      run ? stop() : start();
+      $('startBtn').click();
     }
   });
 
   let rt;
-  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(draw, 150); });
+  window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(redraw, 150); });
+}
+
+function redraw() {
+  if (settings.tab === 'game') {
+    game.showNames = settings.names;
+    game.showFingers = settings.fingers;
+    game.draw();
+  } else draw();
 }
 
 function switchTab(tab) {
   stop();
   settings.tab = tab;
   save();
+  const isGame = tab === 'game';
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
   $('pane-practice').classList.toggle('hidden', tab !== 'practice');
   $('pane-songs').classList.toggle('hidden', tab !== 'songs');
+  $('pane-game').classList.toggle('hidden', !isGame);
+  $('noteField').classList.toggle('hidden', tab === 'songs');
+  $('gameWrap').classList.toggle('hidden', !isGame);
+  for (const id of ['scoreWrap', 'resultsBar', 'legendBar', 'demoBtn']) $(id).classList.toggle('hidden', isGame);
   if (tab === 'practice') makeExercise();
-  else loadSong(settings.song);
+  else if (tab === 'songs') loadSong(settings.song);
+  else {
+    configureGame();
+    game.draw();
+    $('expectName').textContent = '–';
+    $('expectWhere').textContent = '';
+  }
   updateTempoUI();
 }
 
 // Testhaakje: laat toe noten te simuleren vanuit de console.
-window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), states: () => states };
+window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, states: () => states };
 
 buildNoteChips();
 bindUI();

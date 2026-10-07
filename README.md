@@ -19,13 +19,26 @@ python3 serve.py
 De browser opent dan op <http://localhost:8765>. Geef toestemming voor de microfoon.
 Gebruik bij liedjes met muziek liefst een koptelefoon, anders hoort de microfoon de muziek ook.
 
-## Twee modi
+## Online zetten (GitHub Pages)
+
+Bij elke push naar `main` publiceert `.github/workflows/deploy.yml` de map `app/` op GitHub Pages.
+Eenmalig instellen op GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de microfoon gewoon.
+
+## Drie modi
 
 - **Noten oefenen**: kies welke noten (do re mi fa sol la si do), de maat (2/4, 3/4, 4/4),
   de notenwaarden (hele, halve, gepunte halve, kwartnoot) en het aantal maten.
   Elke keer verschijnt een nieuwe willekeurige oefening.
 - **Liedjes**: de stukjes uit het cursusboek, met de opnames uit de Drive-map
   (`langzaam` en `sneller`). Met *Zonder muziek* speel je op de metronoom.
+
+- **Spel 🔥**: eindeloos spel met de noten uit de notenkiezer. De noten schuiven naar de blauwe
+  speellijn; speel elke noot als ze daar aankomt. Elke juiste noot maakt je **reeks** één langer,
+  een **foute noot** zet de reeks terug op 0. Te laat is niet erg: de noot wacht op de lijn (oranje,
+  "te laat") tot je ze speelt. Te vroeg (meer dan één tel voor de lijn) telt niet mee en wordt ook
+  niet bestraft. Je **record** wordt per combinatie van noten onthouden. De schuifregelaar zet de
+  snelheid in noten per minuut.
 
 Overal kan je de metronoom aan/uit zetten en het tempo met de schuifregelaar kiezen
 (bij een opname verandert dat de afspeelsnelheid, zonder dat de toonhoogte verandert).

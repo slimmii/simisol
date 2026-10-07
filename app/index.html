@@ -20,17 +20,20 @@
     <nav class="tabs" role="tablist">
       <button class="tab active" data-tab="practice" role="tab">Noten oefenen</button>
       <button class="tab" data-tab="songs" role="tab">Liedjes</button>
+      <button class="tab" data-tab="game" role="tab">Spel 🔥</button>
     </nav>
   </header>
 
   <main>
     <section class="panel setup">
+      <!-- Notenkiezer: gedeeld door 'Noten oefenen' en 'Spel' -->
+      <div class="field" id="noteField">
+        <label>Welke noten wil je oefenen?</label>
+        <div class="note-chips" id="noteChips"></div>
+      </div>
+
       <!-- Noten oefenen -->
       <div class="pane" id="pane-practice">
-        <div class="field">
-          <label>Welke noten wil je oefenen?</label>
-          <div class="note-chips" id="noteChips"></div>
-        </div>
         <div class="row">
           <div class="field">
             <label for="timeSig">Maat</label>
@@ -82,6 +85,13 @@
           </div>
         </div>
         <p class="hint">🎧 Tip: gebruik een koptelefoon, anders hoort de microfoon de muziek ook.</p>
+      </div>
+
+      <!-- Spel -->
+      <div class="pane hidden" id="pane-game">
+        <p class="hint">De noten schuiven naar de <b>blauwe lijn</b>. Speel elke noot als ze daar aankomt.
+          Elke juiste noot maakt je reeks langer. Een <b>foute noot</b> zet je reeks terug op 0.
+          Te laat is niet erg: de noot wacht op je (en wordt oranje).</p>
       </div>
 
       <hr>
@@ -142,7 +152,17 @@
         </div>
       </div>
 
-      <div class="score-wrap">
+      <div class="game-wrap hidden" id="gameWrap">
+        <div class="game-hud">
+          <div class="hud-streak"><span class="lbl">Reeks</span><b id="gStreak">0</b></div>
+          <div class="hud-small"><span class="lbl">Record</span><b id="gBest">0</b></div>
+          <div class="hud-small"><span class="lbl">Juist</span><b id="gTotal">0</b></div>
+          <div class="hud-msg" id="gMsg"></div>
+        </div>
+        <div class="game" id="game"></div>
+      </div>
+
+      <div class="score-wrap" id="scoreWrap">
         <div class="score-head">
           <h2 id="scoreTitle">Oefening</h2>
           <div class="beat-dots" id="beatDots"></div>
@@ -153,7 +173,7 @@
         <div class="countin hidden" id="countin"></div>
       </div>
 
-      <div class="results">
+      <div class="results" id="resultsBar">
         <span class="res good"><b id="cGood">0</b> goed</span>
         <span class="res bad"><b id="cBad">0</b> fout</span>
         <span class="res early"><b id="cEarly">0</b> te vroeg</span>
@@ -161,7 +181,7 @@
         <span class="msg" id="resultMsg"></span>
       </div>
 
-      <div class="legend">
+      <div class="legend" id="legendBar">
         <span><i class="dot cur"></i>nu spelen</span>
         <span><i class="dot good"></i>goed</span>
         <span><i class="dot bad"></i>fout of te vroeg</span>
