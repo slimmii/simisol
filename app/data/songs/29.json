@@ -1,0 +1,231 @@
+{
+ "num": 29,
+ "title": "Hoedje van papier",
+ "time": [
+  4,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "G4",
+   "d": 1,
+   "c": "G",
+   "l": "Eén"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "twee"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "drie"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "vier,"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "c": "D7",
+   "l": "hoed"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "l": "van,"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "c": "G",
+   "l": "hoed"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "l": "van."
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "l": "Eén"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "twee"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "drie"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "vier,"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "c": "D7",
+   "l": "hoed"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "van"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "pa"
+  },
+  {
+   "p": "G4",
+   "d": 2,
+   "c": "G",
+   "l": "pier."
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "c": "D7",
+   "l": "Heb"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "dan"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "geen"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "hoed"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "l": "meer,"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "c": "G",
+   "l": "maak"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "er"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "één"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "tje"
+  },
+  {
+   "p": "B4",
+   "d": 0.5,
+   "l": "van"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "l": "pa"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "pier."
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "l": "Eén"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "twee"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "drie"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "l": "vier,"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "c": "D7",
+   "l": "hoed"
+  },
+  {
+   "p": "C5",
+   "d": 0.5,
+   "l": "je"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "van"
+  },
+  {
+   "p": "A4",
+   "d": 0.5,
+   "l": "pa"
+  },
+  {
+   "p": "G4",
+   "d": 2,
+   "c": "G",
+   "l": "pier."
+  }
+ ],
+ "uncertain": "Bar lines are missing in the book; inserted every 4 beats (8 bars, verified each sums to 4). No fingerings printed. Chord positions as printed (G over first note of bars 1 and 6, D7/G within bars 2, 4, 5, 8). Bar 6 eighths measured as B4 B4 B4 B4 B4 C5 then D5 quarter - fairly confident."
+}

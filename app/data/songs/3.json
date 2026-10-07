@@ -1,0 +1,40 @@
+{
+  "num": 3,
+  "title": "Boogie woogie",
+  "time": [4,4],
+  "pickup": 0,
+  "notes": [
+    {"p":"E5","d":1,"f":"m","c":"E7"},
+    {"p":"E5","d":1,"f":"i"},
+    {"p":"E5","d":1,"f":"m"},
+    {"p":"E5","d":1,"f":"i"},
+
+    {"p":"E5","d":2,"f":"m","c":"A7"},
+    {"p":"E5","d":2,"f":"i"},
+
+    {"p":"E5","d":1,"f":"m","c":"E7"},
+    {"p":"E5","d":1,"f":"i"},
+    {"p":"E5","d":1,"f":"m"},
+    {"p":"E5","d":1,"f":"i"},
+
+    {"p":"E5","d":2,"f":"m"},
+    {"p":"E5","d":1,"f":"i"},
+    {"p":"E5","d":1,"f":"m"},
+
+    {"p":"E5","d":1,"f":"i","c":"A7"},
+    {"p":"E5","d":1,"f":"m"},
+    {"p":"E5","d":1,"f":"i","c":"A#o7"},
+    {"p":"E5","d":1,"f":"m"},
+
+    {"p":"E5","d":1,"f":"i","c":"B7(sus4)"},
+    {"p":"E5","d":1,"f":"m"},
+    {"p":"E5","d":1,"f":"i"},
+    {"p":"E5","d":1,"f":"m"},
+
+    {"p":"E5","d":2,"f":"i","c":"E7"},
+    {"p":"E5","d":2,"f":"m"},
+
+    {"p":"E5","d":4,"f":"i"}
+  ],
+  "uncertain": "Both photos are quite blurry; all notes read as E5 (mi, top space) which fits the course (1st string only at this point). Chord symbol over bar 6 is hard to read: looks like 'B7(sus4)'. Double barlines (no repeat dots seen) after bars 1, 2(?), 3 and 6 treated as plain section lines. 8 bars."
+}

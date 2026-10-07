@@ -1,0 +1,149 @@
+{
+ "num": 20,
+ "title": "Laat ons allen zingen",
+ "time": [
+  4,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "m",
+   "c": "G",
+   "l": "Laat"
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "i",
+   "l": "ons"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "m",
+   "c": "D",
+   "l": "al"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "i",
+   "l": "len"
+  },
+  {
+   "p": "B4",
+   "d": 2,
+   "f": "m",
+   "c": "G",
+   "l": "zing"
+  },
+  {
+   "p": "B4",
+   "d": 2,
+   "f": "i",
+   "l": "en"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m",
+   "c": "C",
+   "l": "o"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i",
+   "l": "ver"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m",
+   "c": "Am",
+   "l": "leu"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i",
+   "l": "ke"
+  },
+  {
+   "p": "B4",
+   "d": 2,
+   "f": "m",
+   "c": "Em",
+   "l": "ding"
+  },
+  {
+   "p": "A4",
+   "d": 2,
+   "f": "i",
+   "c": "D",
+   "l": "en."
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "m",
+   "c": "G",
+   "l": "Laat"
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "i",
+   "l": "ons"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "m",
+   "c": "D",
+   "l": "al"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "i",
+   "l": "len"
+  },
+  {
+   "p": "B4",
+   "d": 2,
+   "f": "m",
+   "c": "Bm",
+   "l": "spring"
+  },
+  {
+   "p": "D5",
+   "d": 2,
+   "f": "i",
+   "c": "Em7",
+   "l": "en"
+  },
+  {
+   "p": "D5",
+   "d": 2,
+   "c": "Am7",
+   "l": "van"
+  },
+  {
+   "p": "C5",
+   "d": 2,
+   "c": "D7",
+   "l": "ge"
+  },
+  {
+   "p": "B4",
+   "d": 4,
+   "c": "G",
+   "l": "luk!"
+  }
+ ],
+ "uncertain": "Bars 7-8 taken from the first (top-right) ending box, which has no fingerings printed. Box notes D5 C5 | B4 measured from staff lines (photo slightly blurry). Bar 3 E5/C5 alternation and bar 6 D5 (Em7) measured; fairly confident."
+}

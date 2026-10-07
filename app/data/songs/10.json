@@ -1,0 +1,92 @@
+{
+ "num": 10,
+ "title": "First waltz",
+ "time": [
+  3,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "G"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "Bm/F#"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "Em"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "D"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "C"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "C#o7"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "D"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "D7"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "G"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "Bm/F#"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "Em"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "D"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "C"
+  },
+  {
+   "p": "A4",
+   "d": 3,
+   "c": "D7"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "C/G"
+  },
+  {
+   "p": "G4",
+   "d": 3,
+   "c": "G"
+  }
+ ],
+ "uncertain": "Photo slightly blurry; every bar is one dotted half note (stem up), pitches measured from staff-line pixel profiles: G4 on the 2nd line or A4 in the 2nd space. No right-hand fingering letters printed. Chord over bar 6 is hard to read, looks like 'C#o7' (C#dim7). 16 bars."
+}

@@ -1,0 +1,23 @@
+{
+  "num": 2,
+  "title": "De 1ste snaar",
+  "time": [2,4],
+  "pickup": 0,
+  "notes": [
+    {"p":"E5","d":1,"f":"m","l":"Vin"},
+    {"p":"E5","d":1,"f":"i","l":"gers"},
+    {"p":"E5","d":1,"f":"m","l":"stap"},
+    {"p":"E5","d":1,"f":"i","l":"pen"},
+    {"p":"E5","d":1,"f":"m","l":"op"},
+    {"p":"E5","d":1,"f":"i","l":"de"},
+    {"p":"E5","d":2,"f":"m","l":"snaar."},
+    {"p":"E5","d":1,"f":"i","l":"Mi"},
+    {"p":"E5","d":1,"f":"m","l":"die"},
+    {"p":"E5","d":1,"f":"i","l":"klinkt"},
+    {"p":"E5","d":1,"f":"m","l":"nu"},
+    {"p":"E5","d":1,"f":"i","l":"luid"},
+    {"p":"E5","d":1,"f":"m","l":"en"},
+    {"p":"E5","d":2,"f":"i","l":"klaar!"}
+  ],
+  "uncertain": "Lyrics are not printed under the staff; syllables assigned from the rhyme printed above (7 syllables per line match 3 bars of quarters + 1 half). Right edge of the last bar is cut off in the photo; assumed it ends there with the half note."
+}

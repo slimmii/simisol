@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Simisol Notentrainer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">♪</span>
+      <div>
+        <h1>Simisol</h1>
+        <p>noten leren lezen en spelen op gitaar</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="practice" role="tab">Noten oefenen</button>
+      <button class="tab" data-tab="songs" role="tab">Liedjes</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="panel setup">
+      <!-- Noten oefenen -->
+      <div class="pane" id="pane-practice">
+        <div class="field">
+          <label>Welke noten wil je oefenen?</label>
+          <div class="note-chips" id="noteChips"></div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label for="timeSig">Maat</label>
+            <select id="timeSig">
+              <option value="2/4">2/4</option>
+              <option value="3/4">3/4</option>
+              <option value="4/4" selected>4/4</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="bars">Aantal maten</label>
+            <select id="bars">
+              <option>4</option><option selected>8</option><option>12</option><option>16</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Notenwaarden</label>
+          <div class="durations" id="durChips">
+            <label class="dur"><input type="checkbox" value="1" checked><span><i class="glyph">♩</i> kwartnoot <small>1 tel</small></span></label>
+            <label class="dur"><input type="checkbox" value="2" checked><span><i class="glyph open">𝅗𝅥</i> halve noot <small>2 tellen</small></span></label>
+            <label class="dur"><input type="checkbox" value="3"><span><i class="glyph open">𝅗𝅥.</i> gepunte halve <small>3 tellen</small></span></label>
+            <label class="dur"><input type="checkbox" value="4" checked><span><i class="glyph open">𝅝</i> hele noot <small>4 tellen</small></span></label>
+          </div>
+        </div>
+        <button class="btn secondary" id="newExercise">Nieuwe oefening</button>
+      </div>
+
+      <!-- Liedjes -->
+      <div class="pane hidden" id="pane-songs">
+        <div class="field">
+          <label for="songSelect">Kies een liedje</label>
+          <select id="songSelect"></select>
+        </div>
+        <div class="field">
+          <label>Muziek</label>
+          <div class="seg" id="recSeg">
+            <button data-rec="slow" class="active">Langzaam</button>
+            <button data-rec="fast">Sneller</button>
+            <button data-rec="none">Zonder muziek</button>
+          </div>
+        </div>
+        <div class="field sync" id="syncBox">
+          <label>Synchronisatie <small id="syncInfo"></small></label>
+          <div class="seg small">
+            <button data-sync="-0.05">◀ vroeger</button>
+            <button data-sync="0">reset</button>
+            <button data-sync="0.05">later ▶</button>
+          </div>
+        </div>
+        <p class="hint">🎧 Tip: gebruik een koptelefoon, anders hoort de microfoon de muziek ook.</p>
+      </div>
+
+      <hr>
+
+      <div class="field">
+        <label for="tempo">Tempo <output id="tempoOut">70 tellen/min</output></label>
+        <input type="range" id="tempo" min="30" max="160" value="70">
+      </div>
+      <div class="row toggles">
+        <label class="switch"><input type="checkbox" id="metroToggle" checked><span></span>Metronoom</label>
+        <label class="switch" id="waitWrap"><input type="checkbox" id="waitToggle"><span></span>Wachten op mij</label>
+      </div>
+      <div class="row toggles">
+        <label class="switch"><input type="checkbox" id="namesToggle"><span></span>Notennamen</label>
+        <label class="switch"><input type="checkbox" id="fingersToggle" checked><span></span>m / i</label>
+      </div>
+      <details class="more">
+        <summary>Meer instellingen</summary>
+        <div class="field">
+          <label for="difficulty">Hoe streng op de maat?</label>
+          <select id="difficulty">
+            <option value="0.28">Makkelijk</option>
+            <option value="0.18" selected>Normaal</option>
+            <option value="0.1">Streng</option>
+          </select>
+        </div>
+        <label class="switch" style="margin-bottom:14px"><input type="checkbox" id="echoToggle"><span></span>Geen koptelefoon (echo-onderdrukking)</label>
+        <div class="field">
+          <label for="sens">Microfoongevoeligheid</label>
+          <input type="range" id="sens" min="0" max="1" step="0.05" value="0.5">
+        </div>
+        <div class="field">
+          <label for="latency">Microfoonvertraging <output id="latOut">60 ms</output></label>
+          <input type="range" id="latency" min="0" max="250" step="10" value="60">
+        </div>
+      </details>
+    </section>
+
+    <section class="stage">
+      <div class="bar">
+        <div class="buttons">
+          <button class="btn primary big" id="startBtn">▶ Start</button>
+          <button class="btn demo" id="demoBtn" title="Laat de gitaar het stukje voorspelen">🎧 Voorbeeld</button>
+        </div>
+        <div class="listen" id="listen">
+          <div class="heard">
+            <span class="lbl">Ik hoor</span>
+            <span class="name" id="heardName">–</span>
+            <span class="where" id="heardWhere"></span>
+          </div>
+          <div class="tuner"><div class="needle" id="needle"></div></div>
+          <div class="level"><div id="levelFill"></div></div>
+        </div>
+        <div class="expect">
+          <span class="lbl">Speel nu</span>
+          <span class="name" id="expectName">–</span>
+          <span class="where" id="expectWhere"></span>
+        </div>
+      </div>
+
+      <div class="score-wrap">
+        <div class="score-head">
+          <h2 id="scoreTitle">Oefening</h2>
+          <div class="beat-dots" id="beatDots"></div>
+        </div>
+        <div class="score" id="score"></div>
+        <div class="cursor hidden" id="cursor"></div>
+        <div class="badges" id="badges"></div>
+        <div class="countin hidden" id="countin"></div>
+      </div>
+
+      <div class="results">
+        <span class="res good"><b id="cGood">0</b> goed</span>
+        <span class="res bad"><b id="cBad">0</b> fout</span>
+        <span class="res early"><b id="cEarly">0</b> te vroeg</span>
+        <span class="res missed"><b id="cMissed">0</b> gemist</span>
+        <span class="msg" id="resultMsg"></span>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot cur"></i>nu spelen</span>
+        <span><i class="dot good"></i>goed</span>
+        <span><i class="dot bad"></i>fout of te vroeg</span>
+        <span><i class="dot missed"></i>gemist</span>
+      </div>
+      <p class="mic-msg hidden" id="micMsg"></p>
+    </section>
+  </main>
+
+  <script src="lib/vexflow.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

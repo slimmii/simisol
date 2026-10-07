@@ -1,0 +1,100 @@
+{
+ "num": 30,
+ "title": "Trapjes",
+ "time": [
+  4,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "G4",
+   "d": 1
+  },
+  {
+   "p": "A4",
+   "d": 1
+  },
+  {
+   "p": "B4",
+   "d": 2
+  },
+  {
+   "p": "A4",
+   "d": 1
+  },
+  {
+   "p": "B4",
+   "d": 1
+  },
+  {
+   "p": "C5",
+   "d": 2
+  },
+  {
+   "p": "B4",
+   "d": 1
+  },
+  {
+   "p": "C5",
+   "d": 1
+  },
+  {
+   "p": "D5",
+   "d": 2
+  },
+  {
+   "p": "C5",
+   "d": 1
+  },
+  {
+   "p": "D5",
+   "d": 1
+  },
+  {
+   "p": "E5",
+   "d": 2
+  },
+  {
+   "p": "E5",
+   "d": 1
+  },
+  {
+   "p": "D5",
+   "d": 1
+  },
+  {
+   "p": "C5",
+   "d": 2
+  },
+  {
+   "p": "D5",
+   "d": 1
+  },
+  {
+   "p": "C5",
+   "d": 1
+  },
+  {
+   "p": "B4",
+   "d": 2
+  },
+  {
+   "p": "C5",
+   "d": 1
+  },
+  {
+   "p": "B4",
+   "d": 1
+  },
+  {
+   "p": "A4",
+   "d": 2
+  },
+  {
+   "p": "G4",
+   "d": 4
+  }
+ ],
+ "uncertain": "Exercise page: bars 3 and 7 are EMPTY in the book (marked '?', student must fill them in). I filled them with the obvious stair pattern (bar3 B4 C5 D5, bar7 C5 B4 A4). Photo very blurry/angled at top; pitches of bars 1,2,5,6 derived from pixel profiles + stair pattern (line 1 ascends G-A-B / A-B-C / ? / C-D-E with crescendo p->f, line 2 descends E-D-C / D-C-B / ? / G whole, p). Time signature read as 4/4 (blurry, consistent with q q h bars). No fingering letters visible."
+}

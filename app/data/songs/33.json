@@ -1,0 +1,149 @@
+{
+ "num": 33,
+ "title": "Advocaatje",
+ "time": [
+  4,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i",
+   "c": "C",
+   "l": "Ad"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m",
+   "l": "vo"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i",
+   "l": "caat"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m",
+   "l": "je"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i",
+   "l": "ging"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m",
+   "l": "op"
+  },
+  {
+   "p": "G5",
+   "d": 2,
+   "f": "i",
+   "l": "reis,"
+  },
+  {
+   "p": "G5",
+   "d": 1,
+   "c": "G7",
+   "l": "tie"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "l": "re"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "l": "lie"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "re"
+  },
+  {
+   "p": "E5",
+   "d": 2,
+   "c": "C",
+   "l": "lie"
+  },
+  {
+   "p": "C5",
+   "d": 2,
+   "l": "re."
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "l": "Ad"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "l": "vo"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "l": "caat"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "l": "je"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "l": "ging"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "l": "op"
+  },
+  {
+   "p": "G5",
+   "d": 2,
+   "l": "reis,"
+  },
+  {
+   "p": "G5",
+   "d": 1,
+   "c": "G7",
+   "l": "tie"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "l": "re"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "l": "lie"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "l": "re"
+  },
+  {
+   "p": "C5",
+   "d": 4,
+   "c": "C",
+   "l": "lom."
+  }
+ ],
+ "uncertain": "Single-line song, photo angled; pitches checked by pixel profiles. Fingers printed only on first 7 notes (i m i m i m i). Chords: C, G7 (bar 3), C (bar 4), G7 (bar 7), C (bar 8); no chord printed at bar 5."
+}

@@ -1,0 +1,156 @@
+{
+ "num": 35,
+ "title": "Laddercanon",
+ "time": [
+  4,
+  4
+ ],
+ "pickup": 0,
+ "notes": [
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "G4",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "G5",
+   "d": 2,
+   "f": "m"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "F5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "E5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "D5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "C5",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "B4",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "i"
+  },
+  {
+   "p": "A4",
+   "d": 1,
+   "f": "m"
+  },
+  {
+   "p": "G4",
+   "d": 2,
+   "f": "i"
+  },
+  {
+   "p": "r",
+   "d": 2
+  }
+ ],
+ "uncertain": "Photo blurry/angled; pitches determined from pixel profiles of staff lines (ascending pairs G4..G5, then descending pairs F5..G4) - fairly confident. Boxed numbers 2 and 3 above bars 2 and 3 are canon entry points for other players (ignored). Last bar: G4 half + half rest."
+}
