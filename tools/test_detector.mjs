@@ -2,6 +2,7 @@
 // Gebruik: node tools/test_detector.mjs
 import { readFileSync } from 'node:fs';
 import { DetectorCore } from '../app/js/detector-worklet.js';
+import { loadLocalSongs } from './songs_local.mjs';
 
 const SR = 48000;
 const LETTER = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
@@ -122,8 +123,7 @@ function check(name, events, seconds, opts) {
 const ev = (t, written, extra = {}) => ({ t, midi: midiOf(written) - 12, string: STRING[written], ...extra });
 let allPass = true;
 const run = (...a) => { allPass = check(...a) && allPass; };
-const songsSrc = readFileSync(new URL('../app/js/songs.js', import.meta.url), 'utf8');
-const SONGS = JSON.parse(songsSrc.slice(songsSrc.indexOf('['), songsSrc.lastIndexOf(']') + 1));
+const SONGS = loadLocalSongs(); // leeg als de map liedjes/ ontbreekt: dan enkel de basistests
 for (const model of (process.env.MODEL || 'pluck,noise').split(',')) {
   MODEL = model;
   seed = 1;
@@ -147,6 +147,7 @@ run('zacht na luid', [ev(0.5, 'G4', { level: 0.8, tau: 3 }), ev(1.3, 'B4', { lev
 // 5. Hele liedjes uit het boek, met wat menselijke onnauwkeurigheid.
 for (const num of [7, 9, 12, 26, 28, 31, 36, 40]) {
   const song = SONGS.find((s) => s.num === num);
+  if (!song) continue;
   const bpm = 80, spb = 60 / bpm;
   let b = 0;
   const events = [];

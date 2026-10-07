@@ -3,7 +3,7 @@ import {
 } from './notes.js';
 import { PitchDetector } from './pitch.js';
 import { renderScore } from './score.js';
-import { SONGS } from './songs.js';
+import { loadSongs, importZip, clearLibrary } from './library.js';
 import { renderGuitar } from './guitar.js';
 import { Game } from './game.js';
 
@@ -18,7 +18,7 @@ const settings = Object.assign(
     timeSig: '4/4',
     bars: 8,
     durs: [1, 2, 4],
-    song: SONGS[0]?.num,
+    song: null,
     rec: 'slow',
     bpm: 70,
     speed: 100,
@@ -193,7 +193,45 @@ function updateSyncInfo() {
   $('syncInfo').textContent = v ? `${v > 0 ? '+' : ''}${Math.round(v * 1000)} ms` : '';
 }
 
+// Liedjes komen uit de browseropslag (geïmporteerde zip), niet uit de website zelf.
+let SONGS = [];
+
+function fillSongSelect() {
+  const sel = $('songSelect');
+  sel.innerHTML = SONGS.map((s) => `<option value="${s.num}">${s.num}. ${escapeHtml(s.title)}${s.audio ? ' 🎧' : ''}</option>`).join('');
+  if (settings.song != null) sel.value = settings.song;
+  const n = SONGS.length, a = SONGS.filter((s) => s.audio).length;
+  $('libraryInfo').textContent = n
+    ? `${n} liedjes in deze browser (${a} met muziek). Een nieuwe zip vervangt liedjes met hetzelfde nummer.`
+    : 'Nog geen liedjes. Importeer de zip met liedjes (gemaakt met tools/make_songs_zip.py).';
+  $('clearBtn').classList.toggle('hidden', !n);
+  $('songControls').classList.toggle('hidden', !n);
+}
+
+function escapeHtml(t) {
+  return String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+}
+
+function showNoSongs() {
+  stop();
+  piece = null;
+  layout = null;
+  $('scoreTitle').textContent = 'Liedjes';
+  $('score').innerHTML = `<div class="empty-songs">Er staan nog geen liedjes in deze browser.<br>
+    Klik links op <b>📦 Liedjes importeren</b> en kies je <code>simisol-liedjes.zip</code>.<br>
+    De liedjes blijven daarna bewaard in deze browser, ook als je de pagina sluit.</div>`;
+  $('expectName').textContent = '–';
+  $('expectWhere').textContent = '';
+}
+
+async function refreshLibrary() {
+  SONGS = await loadSongs();
+  fillSongSelect();
+  if (settings.tab === 'songs') loadSong(settings.song);
+}
+
 function loadSong(num) {
+  if (!SONGS.length) return showNoSongs();
   const s = SONGS.find((x) => x.num === num) || SONGS[0];
   settings.song = s.num;
   save();
@@ -784,9 +822,41 @@ function bindUI() {
 
   // liedjes
   const sel = $('songSelect');
-  sel.innerHTML = SONGS.map((s) => `<option value="${s.num}">${s.num}. ${s.title}${s.audio ? ' 🎧' : ''}</option>`).join('');
-  sel.value = settings.song;
+  fillSongSelect();
   sel.onchange = () => loadSong(+sel.value);
+
+  // liedjes importeren uit een zip en bewaren in deze browser
+  $('importBtn').onclick = () => $('zipInput').click();
+  $('zipInput').onchange = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    stop();
+    $('importBtn').disabled = true;
+    try {
+      const r = await importZip(file, (msg) => { $('libraryInfo').textContent = msg; });
+      await refreshLibrary();
+      $('libraryInfo').textContent = `✓ ${r.songs} liedjes geïmporteerd (${r.audio} opnames). Ze blijven bewaard in deze browser.`;
+    } catch (err) {
+      $('libraryInfo').textContent = `Importeren mislukt: ${err.message}`;
+    } finally {
+      $('importBtn').disabled = false;
+    }
+  };
+  // verwijderen vraagt een tweede klik ter bevestiging
+  let clearArmed = null;
+  $('clearBtn').onclick = async () => {
+    if (!clearArmed) {
+      $('clearBtn').textContent = 'Zeker? Klik nog eens om alle liedjes te verwijderen';
+      clearArmed = setTimeout(() => { clearArmed = null; $('clearBtn').textContent = 'Alle liedjes uit deze browser verwijderen'; }, 4000);
+      return;
+    }
+    clearTimeout(clearArmed);
+    clearArmed = null;
+    $('clearBtn').textContent = 'Alle liedjes uit deze browser verwijderen';
+    await clearLibrary();
+    await refreshLibrary();
+  };
   document.querySelectorAll('#recSeg button').forEach((b) => (b.onclick = () => {
     stop();
     settings.rec = b.dataset.rec;
@@ -892,6 +962,7 @@ function switchTab(tab) {
 // Testhaakje: laat toe noten te simuleren vanuit de console.
 window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, states: () => states };
 
+SONGS = await loadSongs();
 buildNoteChips();
 bindUI();
 switchTab(settings.tab);

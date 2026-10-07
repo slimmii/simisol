@@ -1,4 +1,5 @@
 # Publiceert de map app/ op GitHub Pages bij elke push naar main.
+# De liedjes zitten er niet in: die importeer je zelf als zip in de app (zie README).
 name: Deploy naar GitHub Pages
 
 on:
@@ -23,14 +24,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      # songs.js opnieuw opbouwen uit app/data, zodat aanpassingen aan de liedjes altijd meekomen
-      - name: Liedjes bundelen
-        run: python3 tools/build_songs.py
 
       - name: Controle op syntaxfouten
         run: for f in app/js/*.js; do node --check "$f"; done

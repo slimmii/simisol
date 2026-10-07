@@ -30,8 +30,8 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
 - **Noten oefenen**: kies welke noten (do re mi fa sol la si do), de maat (2/4, 3/4, 4/4),
   de notenwaarden (hele, halve, gepunte halve, kwartnoot) en het aantal maten.
   Elke keer verschijnt een nieuwe willekeurige oefening.
-- **Liedjes**: de stukjes uit het cursusboek, met de opnames uit de Drive-map
-  (`langzaam` en `sneller`). Met *Zonder muziek* speel je op de metronoom.
+- **Liedjes**: de stukjes uit het cursusboek, met de opnames (`langzaam` en `sneller`). Die
+  importeer je eerst zelf als zip (zie *Liedjes* hieronder). Met *Zonder muziek* speel je op de metronoom.
 
 - **Spel 🔥**: eindeloos spel met de noten uit de notenkiezer. De noten schuiven naar de blauwe
   speellijn; speel elke noot als ze daar aankomt. Elke juiste noot maakt je **reeks** één langer,
@@ -68,9 +68,30 @@ Testen zonder gitaar: `node tools/test_detector.mjs` speelt gesimuleerde gitaarl
 (Karplus-Strong) af en telt goed / fout / gemist / extra. Dezelfde gitaar (`app/js/guitar.js`)
 zit achter de knop Voorbeeld; `node tools/render_synth.mjs 26 twinkel.wav` maakt er een WAV-bestand van.
 
-## Liedjes aanpassen
+## Liedjes (lokaal, niet op GitHub)
 
-De liedjes staan als JSON in `app/data/songs/<nummer>.json`:
+De liedjes uit het cursusboek (noten en opnames) staan **niet** in deze repository en ook niet op
+de website. Je bewaart ze lokaal in de map `liedjes/` (staat in `.gitignore`):
+
+```
+liedjes/
+  songs/<nummer>.json   noten per liedje
+  sync.json             tempo en startpunt van elke opname
+  audio/<nummer>-slow.mp3, <nummer>-fast.mp3
+```
+
+Maak er een zip van en importeer die in de app (tabblad **Liedjes → 📦 Liedjes importeren**):
+
+```
+python3 tools/make_songs_zip.py        # → simisol-liedjes.zip
+```
+
+De app bewaart de liedjes en opnames in de opslag van je browser (IndexedDB). Ze blijven daar
+staan tot je ze verwijdert of de sitegegevens van je browser wist. Een nieuwe zip vervangt
+liedjes met hetzelfde nummer. Gebruik je een andere browser of computer, importeer dan daar
+dezelfde zip.
+
+### Een liedje aanpassen
 
 ```json
 { "num": 12, "title": "...", "time": [4, 4], "pickup": 0,
@@ -81,7 +102,11 @@ De liedjes staan als JSON in `app/data/songs/<nummer>.json`:
 - `d` = duur in tellen (4 hele, 3 gepunte halve, 2 halve, 1 kwart, 0.5 achtste)
 - `f` = vinger (`m`/`i`), `c` = akkoord, `l` = tekst — allemaal optioneel
 
-Na het aanpassen: `python3 tools/build_songs.py`.
+Maak daarna opnieuw de zip en importeer hem.
 
-Het tempo en het startpunt van elke opname staan in `app/data/sync.json`. Die werden
-automatisch berekend met `tools/sync_audio.py` (vereist `numpy` en `librosa`).
+Het tempo en het startpunt van elke opname (`liedjes/sync.json`) worden automatisch berekend met
+`tools/sync_audio.py` (vereist `numpy` en `librosa`):
+
+```
+python3 tools/sync_audio.py liedjes/songs liedjes/audio liedjes/sync.json
+```

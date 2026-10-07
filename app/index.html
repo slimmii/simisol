@@ -64,6 +64,13 @@
 
       <!-- Liedjes -->
       <div class="pane hidden" id="pane-songs">
+        <div class="library">
+          <input type="file" id="zipInput" accept=".zip,application/zip" hidden>
+          <button class="btn secondary" id="importBtn">📦 Liedjes importeren (.zip)</button>
+          <p class="hint" id="libraryInfo"></p>
+          <button class="linkbtn hidden" id="clearBtn">Alle liedjes uit deze browser verwijderen</button>
+        </div>
+        <div id="songControls">
         <div class="field">
           <label for="songSelect">Kies een liedje</label>
           <select id="songSelect"></select>
@@ -85,6 +92,7 @@
           </div>
         </div>
         <p class="hint">🎧 Tip: gebruik een koptelefoon, anders hoort de microfoon de muziek ook.</p>
+        </div>
       </div>
 
       <!-- Spel -->

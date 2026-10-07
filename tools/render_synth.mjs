@@ -1,12 +1,13 @@
 // Maakt een WAV van een liedje met de gesimuleerde gitaar (dezelfde als het voorbeeld in de app).
 // Gebruik: node tools/render_synth.mjs <liedjenummer> <uit.wav> [pluck|noise] [bpm]
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { renderGuitar } from '../app/js/guitar.js';
+import { loadLocalSongs } from './songs_local.mjs';
 
 const [num = '26', outPath = 'gitaar.wav', model = 'pluck', bpmArg = '80'] = process.argv.slice(2);
 const SR = 48000, bpm = +bpmArg;
-const src = readFileSync(new URL('../app/js/songs.js', import.meta.url), 'utf8');
-const song = JSON.parse(src.slice(src.indexOf('['), src.lastIndexOf(']') + 1)).find((s) => s.num === +num);
+const song = loadLocalSongs().find((s) => s.num === +num);
+if (!song) { console.error(`Liedje ${num} niet gevonden in liedjes/songs/.`); process.exit(1); }
 const out = renderGuitar(song.notes, { bpm, sampleRate: SR, lead: 0.5, model, human: 0.02 });
 
 const data = Buffer.alloc(44 + out.length * 2);
