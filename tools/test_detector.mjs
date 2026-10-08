@@ -1,7 +1,8 @@
 // Test de noot-detectie met een gesimuleerde gitaar (Karplus-Strong).
 // Gebruik: node tools/test_detector.mjs
 import { readFileSync } from 'node:fs';
-import { DetectorCore } from '../app/js/detector-worklet.js';
+// DETECTOR=<pad> laat toe een andere versie van de detector te testen (ter vergelijking)
+const { DetectorCore } = await import(process.env.DETECTOR ? new URL(process.env.DETECTOR, `file://${process.cwd()}/`).href : '../app/js/detector-worklet.js');
 import { loadLocalSongs } from './songs_local.mjs';
 
 const SR = 48000;
@@ -87,10 +88,12 @@ function detect(signal, events = []) {
 }
 
 function check(name, events, seconds, opts) {
+  // vaste willekeur per test, zodat het toevoegen van tests de andere niet verandert
+  seed = 1 + [...(MODEL + name)].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 2147483646, 7);
   const sig = synth(events, seconds, opts);
   const got = detect(sig, events);
   const used = new Set();
-  let ok = 0, wrongPitch = 0, missed = 0, sumErr = 0, maxErr = 0;
+  let ok = 0, wrongPitch = 0, missed = 0, sumErr = 0, maxErr = 0, falseOk = 0;
   for (const e of events) {
     const k = got.findIndex((g, i) => !used.has(i) && Math.abs(g.time - e.t) < 0.12);
     if (k < 0) { missed++; continue; }
@@ -98,6 +101,8 @@ function check(name, events, seconds, opts) {
     const err = Math.abs(got[k].time - e.t);
     sumErr += err; maxErr = Math.max(maxErr, err);
     if (got[k].midi === e.midi) ok++; else wrongPitch++;
+    // gevaarlijk: de verwachte noot gemeld terwijl er iets anders gespeeld werd (= foute noot goedgerekend)
+    if (e.expectMidi != null && e.expectMidi !== e.midi && got[k].midi === e.expectMidi) falseOk++;
   }
   const extra = got.filter((_, i) => !used.has(i));
   if (process.env.VERBOSE && name.includes(process.env.VERBOSE)) {
@@ -114,7 +119,8 @@ function check(name, events, seconds, opts) {
     }
   }
   const pass = ok === events.length && extra.length === 0;
-  console.log(`${pass ? 'OK  ' : 'FAIL'} ${name.padEnd(34)} goed ${ok}/${events.length}  foute toon ${wrongPitch}  gemist ${missed}  extra ${extra.length}` +
+  totals.falseOk += falseOk;
+  console.log(`${pass ? 'OK  ' : 'FAIL'} ${name.padEnd(34)} goed ${ok}/${events.length}${falseOk ? `  ⚠ FOUT GOEDGEREKEND ${falseOk}` : ''}  foute toon ${wrongPitch}  gemist ${missed}  extra ${extra.length}` +
     `  timing gem ${(1000 * sumErr / Math.max(1, ok + wrongPitch)).toFixed(0)} ms, max ${(1000 * maxErr).toFixed(0)} ms` +
     (extra.length ? `  extra: ${extra.map((x) => `${x.time.toFixed(2)}s:${x.midi}${x.attack ? '' : 'L'}`).join(' ')}` : ''));
   return pass;
@@ -122,6 +128,7 @@ function check(name, events, seconds, opts) {
 
 const ev = (t, written, extra = {}) => ({ t, midi: midiOf(written) - 12, string: STRING[written], ...extra });
 let allPass = true;
+const totals = { falseOk: 0 };
 const run = (...a) => { allPass = check(...a) && allPass; };
 const SONGS = loadLocalSongs(); // leeg als de map liedjes/ ontbreekt: dan enkel de basistests
 for (const model of (process.env.MODEL || 'pluck,noise').split(',')) {
@@ -141,6 +148,19 @@ run('do-re op dezelfde snaar', ['C5', 'D5', 'C5', 'D5', 'B4', 'C5'].map((p, k) =
 // 3b. Foute noot: verwacht sol, maar la gespeeld op dezelfde snaar -> mag NIET als sol tellen.
 run('foute la i.p.v. sol (zelfde snaar)', [ev(0.5, 'G4'), ev(1.25, 'G4'), ev(2.0, 'G4'), { ...ev(2.75, 'A4'), expectMidi: 55 }, ev(3.5, 'G4')], 5);
 run('foute si i.p.v. sol', [ev(0.5, 'G4'), ev(1.25, 'G4'), { ...ev(2.0, 'B4'), expectMidi: 55 }, ev(2.75, 'G4')], 4);
+// 3c. Buurnoot gespeeld terwijl de app een andere noot verwacht: moet de GESPEELDE noot geven,
+//     nooit de verwachte (anders wordt een fout goedgerekend).
+{
+  const pairs = [['G4', 'A4'], ['A4', 'G4'], ['C5', 'D5'], ['D5', 'E5'], ['E5', 'F5'], ['F5', 'E5'], ['B4', 'C5'], ['C5', 'B4'],
+    ['D4', 'E4'], ['E4', 'F4'], ['C4', 'D4'], ['G5', 'F5'],
+    // verkeerde octaaf: lage sol/mi/re i.p.v. de hoge (en omgekeerd)
+    ['G4', 'G5'], ['G5', 'G4'], ['E4', 'E5'], ['E5', 'E4'], ['D4', 'D5'], ['C4', 'C5']];
+  for (const [played, expected] of pairs) {
+    const evs = [];
+    for (let k = 0; k < 6; k++) evs.push({ ...ev(0.5 + k * 0.7, k % 2 ? played : 'B4'), expectMidi: midiOf(k % 2 ? expected : 'B4') - 12 });
+    run(`${played} gespeeld, ${expected} verwacht`, evs, 5);
+  }
+}
 // 4. Wisselend volume en zachte noot na een luide.
 run('zacht na luid', [ev(0.5, 'G4', { level: 0.8, tau: 3 }), ev(1.3, 'B4', { level: 0.12 }), ev(2.1, 'E5', { level: 0.1 })], 4);
 
@@ -160,5 +180,6 @@ for (const num of [7, 9, 12, 26, 28, 31, 36, 40]) {
 
 }
 
+console.log(`\nFoute noten die als de verwachte noot werden goedgerekend: ${totals.falseOk}`);
 console.log(allPass ? '\nAlles OK' : '\nEr zijn fouten');
 process.exit(allPass ? 0 : 1);

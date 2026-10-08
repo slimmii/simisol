@@ -61,6 +61,7 @@ function click(time, accent) {
   osc.connect(g).connect(c.destination);
   osc.start(time);
   osc.stop(time + 0.08);
+  return osc;
 }
 
 async function ensureMic() {
@@ -404,6 +405,7 @@ function onFrame(f) {
 }
 
 function onNote(ev) {
+  if (calib) return calibNote(ev);
   if (game.running) return game.onNote(ev);
   if (!run || !piece || run.demo) return;
   if (run.wait) return judgeWait(ev);
@@ -514,6 +516,116 @@ async function startGame() {
   game.start();
   $('startBtn').textContent = '■ Stop';
   $('startBtn').classList.add('stop');
+}
+
+// ---------- microfoonvertraging meten ----------
+// Er klinken 4 aftelklikken en daarna 8 klikken; bij elke klik tokkel je een losse snaar.
+// Het mediane verschil tussen klik en tokkel is de totale vertraging (luidspreker + reactie + microfoon):
+// precies wat de app moet aftrekken om op de maat te beoordelen.
+const CALIB_BPM = 75, CALIB_COUNT = 4, CALIB_PLAYS = 8;
+const OPEN_STRINGS = [40, 45, 50, 55, 59, 64]; // klinkende midi van de losse snaren E A D G B E
+let calib = null;
+
+function calibNote(ev) {
+  // Alleen een losse snaar telt. De 'tok' uit de luidspreker heeft geen toonhoogte, en een
+  // eventuele boventoon ervan valt (bijna) nooit precies op een losse snaar.
+  if (ev.attack === false || !OPEN_STRINGS.includes(ev.midi)) return;
+  // een tik zonder echte nieuwe snaartoon (bv. de 'tok' op een snaar die nog naklinkt) telt niet
+  if (ev.fresh != null && ev.fresh < 0.35) return;
+  calib.onsets.push(ev.time);
+}
+
+// Klik zonder toonhoogte (korte ruis-'tok'), zodat de microfoon hem niet voor een noot houdt.
+let tokBuffer = null;
+function tok(time, accent) {
+  const c = audioCtx();
+  if (!tokBuffer) {
+    tokBuffer = c.createBuffer(1, Math.round(c.sampleRate * 0.03), c.sampleRate);
+    const d = tokBuffer.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (c.sampleRate * 0.006));
+  }
+  const src = c.createBufferSource();
+  src.buffer = tokBuffer;
+  const bp = c.createBiquadFilter();
+  bp.type = 'bandpass';
+  bp.frequency.value = accent ? 3500 : 2500;
+  bp.Q.value = 1.2;
+  const g = c.createGain();
+  g.gain.value = accent ? 1.6 : 1.1;
+  src.connect(bp).connect(g).connect(c.destination);
+  src.start(time);
+  return src;
+}
+
+function setCalibInfo(html) { $('calibInfo').innerHTML = html; }
+
+async function calibrateLatency() {
+  if (calib) return cancelCalibration('Gestopt.');
+  stop();
+  if (!(await ensureMic())) return;
+  const c = audioCtx();
+  await c.resume();
+  detector.latency = 0; // ruwe tijden meten
+  detector.setExpect([]); // geen verwachting: ruis mag niet 'bevestigd' worden als snaar
+  const spb = 60 / CALIB_BPM;
+  const t0 = c.currentTime + 0.6;
+  const clicks = [], oscs = [];
+  for (let k = 0; k < CALIB_COUNT + CALIB_PLAYS; k++) {
+    const t = t0 + k * spb;
+    oscs.push(tok(t, k === 0 || k === CALIB_COUNT));
+    if (k >= CALIB_COUNT) clicks.push(t);
+  }
+  calib = { onsets: [], clicks, oscs, timers: [] };
+  $('calibBtn').textContent = '■ Stop meten';
+  $('calibBtn').classList.add('running');
+  for (let k = 0; k < CALIB_COUNT + CALIB_PLAYS; k++) {
+    const msg = k < CALIB_COUNT
+      ? `Luister… <span class="big">${k + 1}</span>`
+      : `Tokkel nu op de klik! <span class="big">${k - CALIB_COUNT + 1} / ${CALIB_PLAYS}</span>`;
+    calib.timers.push(setTimeout(() => setCalibInfo(msg), Math.max(0, (t0 + k * spb - c.currentTime) * 1000)));
+  }
+  const end = t0 + (CALIB_COUNT + CALIB_PLAYS - 1) * spb + 0.7;
+  calib.timers.push(setTimeout(finishCalibration, (end - c.currentTime) * 1000));
+}
+
+function cancelCalibration(msg) {
+  if (!calib) return;
+  calib.timers.forEach(clearTimeout);
+  calib.oscs.forEach((o) => { try { o.stop(); } catch {} });
+  calib = null;
+  if (detector) detector.latency = settings.latency / 1000;
+  $('calibBtn').textContent = '🎯 Vertraging meten';
+  $('calibBtn').classList.remove('running');
+  if (msg) setCalibInfo(msg);
+}
+
+function finishCalibration() {
+  const { onsets, clicks } = calib;
+  // per klik: de eerste tokkel tussen 150 ms vóór en 450 ms na de klik
+  const diffs = [];
+  for (const t of clicks) {
+    const o = onsets.find((x) => x > t - 0.15 && x < t + 0.45);
+    if (o != null) diffs.push(o - t);
+  }
+  cancelCalibration();
+  if (diffs.length < 5) {
+    setCalibInfo(`Ik hoorde maar ${diffs.length} van de ${CALIB_PLAYS} tokkels. Tokkel wat harder, of zet de microfoon gevoeliger, en probeer opnieuw.`);
+    return;
+  }
+  diffs.sort((a, b) => a - b);
+  const median = diffs[diffs.length >> 1];
+  const spread = [...diffs.map((d) => Math.abs(d - median))].sort((a, b) => a - b)[diffs.length >> 1];
+  if (spread > 0.07) {
+    setCalibInfo(`De tokkels waren niet regelmatig genoeg (± ${Math.round(spread * 1000)} ms). Probeer nog eens, zo precies mogelijk op de klik.`);
+    return;
+  }
+  const ms = Math.max(0, Math.min(400, Math.round((median * 1000) / 5) * 5));
+  settings.latency = ms;
+  save();
+  $('latency').value = ms;
+  $('latOut').textContent = ms + ' ms';
+  if (detector) detector.latency = ms / 1000;
+  setCalibInfo(`✓ Gemeten: <b>${ms} ms</b> (${diffs.length} van de ${CALIB_PLAYS} tokkels, ± ${Math.round(spread * 1000)} ms). Ingesteld.`);
 }
 
 // ---------- start / stop ----------
@@ -627,6 +739,7 @@ async function playDemo() {
 }
 
 function stop() {
+  if (calib) cancelCalibration('Gestopt.');
   if (game.running) {
     game.stop();
     $('startBtn').textContent = '▶ Start';
@@ -901,8 +1014,17 @@ function bindUI() {
 
   $('difficulty').value = String(settings.tol);
   $('difficulty').onchange = (e) => { settings.tol = +e.target.value; save(); };
+  // gevoeligheid: -0.6 (heel ongevoelig, enkel luide tokkels) .. 1 (heel gevoelig)
+  const sensLabel = (v) => (v < -0.2 ? 'heel laag' : v < 0.25 ? 'laag' : v < 0.65 ? 'normaal' : 'hoog');
   $('sens').value = settings.sens;
-  $('sens').oninput = (e) => { settings.sens = +e.target.value; if (detector) detector.sensitivity = settings.sens; save(); };
+  $('sensOut').textContent = sensLabel(settings.sens);
+  $('sens').oninput = (e) => {
+    settings.sens = +e.target.value;
+    $('sensOut').textContent = sensLabel(settings.sens);
+    if (detector) detector.sensitivity = settings.sens;
+    save();
+  };
+  $('calibBtn').onclick = calibrateLatency;
   $('latency').value = settings.latency;
   $('latOut').textContent = settings.latency + ' ms';
   $('latency').oninput = (e) => {
@@ -960,7 +1082,7 @@ function switchTab(tab) {
 }
 
 // Testhaakje: laat toe noten te simuleren vanuit de console.
-window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, states: () => states };
+window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, get calib() { return calib; }, states: () => states };
 
 SONGS = await loadSongs();
 buildNoteChips();

@@ -128,12 +128,15 @@
         </div>
         <label class="switch" style="margin-bottom:14px"><input type="checkbox" id="echoToggle"><span></span>Geen koptelefoon (echo-onderdrukking)</label>
         <div class="field">
-          <label for="sens">Microfoongevoeligheid</label>
-          <input type="range" id="sens" min="0" max="1" step="0.05" value="0.5">
+          <label for="sens">Microfoongevoeligheid <output id="sensOut"></output></label>
+          <input type="range" id="sens" min="-0.6" max="1" step="0.05" value="0.5">
+          <div class="range-ends"><span>minder gevoelig</span><span>gevoeliger</span></div>
         </div>
         <div class="field">
           <label for="latency">Microfoonvertraging <output id="latOut">60 ms</output></label>
-          <input type="range" id="latency" min="0" max="250" step="10" value="60">
+          <input type="range" id="latency" min="0" max="400" step="5" value="60">
+          <button class="btn secondary calib" id="calibBtn">🎯 Vertraging meten</button>
+          <p class="hint" id="calibInfo">Tokkel een <b>losse snaar</b> (zonder vinger op de hals) telkens als je de klik hoort. De app meet dan zelf de vertraging.</p>
         </div>
       </details>
     </section>

@@ -48,8 +48,10 @@ Met **🎧 Voorbeeld** speelt een gesimuleerde gitaar het stukje voor in het gek
 de cursor meeloopt (met de metronoom aan telt hij eerst een maat af). Zo hoor je hoe het moet klinken.
 
 Loopt de muziek net niet gelijk met de cursor? Gebruik *Synchronisatie* (◀ vroeger / later ▶);
-dat wordt per liedje onthouden. Hoor je dat de app je noten te laat registreert, pas dan
-*Microfoonvertraging* aan onder **Meer instellingen**.
+dat wordt per liedje onthouden. Worden je noten als te laat (of te vroeg) beoordeeld terwijl je
+op de maat speelt, gebruik dan **Meer instellingen → 🎯 Vertraging meten**: je tokkelt 8 keer een
+losse snaar op een tik, en de app stelt de *Microfoonvertraging* zelf in. Pikt de microfoon
+geluiden op die geen noten zijn, zet dan de *Microfoongevoeligheid* lager (tot "heel laag").
 
 ## Hoe de noot-herkenning werkt
 

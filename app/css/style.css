@@ -264,3 +264,9 @@ input[type=range] { accent-color: var(--accent); }
 .empty-songs { padding: 30px 16px; text-align: center; color: var(--muted); font-weight: 700; line-height: 1.5; }
 .empty-songs b { color: var(--ink); }
 .empty-songs code { background: var(--bg); padding: 1px 6px; border-radius: 6px; }
+
+/* ---------- Microfoon-instellingen ---------- */
+.range-ends { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+.btn.calib { margin-top: 8px; }
+.btn.calib.running { background: var(--ink); color: #fff; }
+#calibInfo .big { display: block; font-size: 22px; font-weight: 900; color: var(--accent-ink); margin: 4px 0; }

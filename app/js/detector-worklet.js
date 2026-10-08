@@ -6,7 +6,8 @@ const BUF = 2048; // analysevenster voor toonhoogte (~43 ms bij 48 kHz)
 const HOP = 256; // elke ~5 ms een analyse
 const RMS_WIN = 1024; // ~21 ms: lang genoeg om zweving tussen twee snaren uit te middelen
 const FFT_N = 1024;
-const SPEC_N = 4096; // fijnere spectra (zero-padded) om de nieuwe toon bij een aanslag te vinden
+const SPEC_WIN = 4096; // ~85 ms: lang genoeg om buurnoten (bv. sol en la) in het spectrum te scheiden
+const SPEC_N = 8192; // zero-padded FFT van dat venster
 const RING = 16384;
 
 function yin(buf, sr, threshold, d) {
@@ -118,7 +119,7 @@ export class DetectorCore {
     this.fftBig = makeFFT(SPEC_N);
     this.bre = new Float32Array(SPEC_N);
     this.bim = new Float32Array(SPEC_N);
-    this.hannBig = new Float32Array(BUF).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (BUF - 1)));
+    this.hannBig = new Float32Array(SPEC_WIN).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (SPEC_WIN - 1)));
     this.re = new Float32Array(FFT_N);
     this.im = new Float32Array(FFT_N);
     this.hann = new Float32Array(FFT_N).map((_, i) => 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (FFT_N - 1)));
@@ -167,22 +168,22 @@ export class DetectorCore {
     }
   }
 
-  copyWindow(target = this.win, back = 0) {
+  copyWindow(target = this.win, back = 0, len = BUF) {
     const L = this.ring.length;
-    let p = (this.writePos - BUF - back + 2 * L) % L;
-    for (let i = 0; i < BUF; i++) {
+    let p = (this.writePos - len - back + 2 * L) % L;
+    for (let i = 0; i < len; i++) {
       target[i] = this.ring[p];
       p = p + 1 === L ? 0 : p + 1;
     }
   }
 
-  // Magnitudespectrum (4096 punten) van een venster van 2048 samples dat `back` samples geleden eindigde.
+  // Magnitudespectrum van een venster van SPEC_WIN samples dat `back` samples geleden eindigde.
   bigSpectrum(back) {
-    const tmp = this.tmpWin || (this.tmpWin = new Float32Array(BUF));
-    this.copyWindow(tmp, back);
+    const tmp = this.tmpWin || (this.tmpWin = new Float32Array(SPEC_WIN));
+    this.copyWindow(tmp, back, SPEC_WIN);
     this.bre.fill(0);
     this.bim.fill(0);
-    for (let i = 0; i < BUF; i++) this.bre[i] = tmp[i] * this.hannBig[i];
+    for (let i = 0; i < SPEC_WIN; i++) this.bre[i] = tmp[i] * this.hannBig[i];
     this.fftBig(this.bre, this.bim);
     const mag = new Float32Array(SPEC_N / 2);
     for (let k = 0; k < SPEC_N / 2; k++) mag[k] = Math.hypot(this.bre[k], this.bim[k]);
@@ -196,8 +197,9 @@ export class DetectorCore {
     const hz = this.sr / SPEC_N;
     const diff = new Float32Array(n);
     for (let k = 0; k < n; k++) diff[k] = Math.max(0, post[k] - pre[k]);
+    // ±2% (een halve toon is ~6%), zodat de buurnoot niet meetelt
     const peakIn = (arr, f) => {
-      const lo = Math.max(1, Math.floor((f * 0.97) / hz)), hi = Math.min(n - 1, Math.ceil((f * 1.03) / hz));
+      const lo = Math.max(1, Math.floor((f * 0.98) / hz)), hi = Math.min(n - 1, Math.ceil((f * 1.02) / hz));
       let m = 0;
       for (let k = lo; k <= hi; k++) if (arr[k] > m) m = arr[k];
       return m;
@@ -226,6 +228,15 @@ export class DetectorCore {
       const oddPost = peakIn(post, f0) + peakIn(post, 3 * f0) + peakIn(post, 5 * f0);
       return oddPost >= 0.1 * postMax && odd >= 0.03 * postMax && odd >= 0.25 * even;
     };
+    // Hoeveel nieuwe energie zit er op de harmonischen van m (de 'sterkte' van m als nieuwe toon)?
+    const newSal = (m) => {
+      const f0 = f0Of(m);
+      let sc = 0;
+      for (let h = 1; h <= 8 && f0 * h <= 5000; h++) sc += peakIn(diff, f0 * h);
+      return sc;
+    };
+    let maxNewSal = 0;
+    for (let midi = 40; midi <= 84; midi++) maxNewSal = Math.max(maxNewSal, newSal(midi));
     // Beste nieuwe kandidaat: grondtoon goed hoorbaar én grotendeels nieuw.
     let best = null, bestS = 0;
     for (let midi = 40; midi <= 84; midi++) {
@@ -270,6 +281,19 @@ export class DetectorCore {
     };
     // Is deze (verwachte) noot bij de aanslag echt nieuw aangeslagen?
     const confirms = (m, yinPitch) => {
+      // YIN hoort met zekerheid een ANDERE nieuwe noot (geen octaaf van m): dan is m niet gespeeld.
+      // (Behalve als YIN's toon een ondertoon van m is: een octaaf of een octaaf + kwint lager.)
+      const under = yinPitch != null && [12, 19, 24].includes(m - yinPitch);
+      if (yinPitch != null && yinPitch !== m && !under && (yinPitch - m) % 12 !== 0 && newFrac(yinPitch) >= 0.25) return false;
+      // De harmonischen van m moeten echt nieuw klinken, bijna zo sterk als de sterkste nieuwe toon.
+      // (Anders kan wat overlopende energie van een buurnoot m ten onrechte 'bevestigen'.)
+      // en een buurnoot die duidelijk sterker nieuw klinkt (bv. mi i.p.v. fa) wint
+      if (best != null && best !== m && (best - m) % 12 !== 0 && ![12, 19, 24].includes(m - best) && yinPitch !== m && newSal(best) > newSal(m)) return false;
+      if (newSal(m) < 0.6 * maxNewSal) {
+        // uitzondering: dezelfde snaar opnieuw aangeslagen (weinig nieuwe energie, maar m klinkt duidelijk)
+        const sameAgain = yinPitch === m;
+        if (!sameAgain) return false;
+      }
       // YIN (zeker) en verwachting zijn het eens, en de toon is minstens deels nieuw: klaar.
       if (yinPitch === m && newFrac(m) >= 0.15) return true;
       if (!present(m)) {
@@ -289,7 +313,31 @@ export class DetectorCore {
       if (low >= 40 && present(low) && newFrac(low) >= 0.25 && yinPitch !== m) return false;
       return true;
     };
-    return { newFrac, best, choose, confirms };
+    const bestOf = (cands) => {
+      let pick = null, pickS = -1;
+      for (const c of cands) {
+        if (c > 84) continue;
+        const sc = newSal(c);
+        if (sc > pickS) { pick = c; pickS = sc; }
+      }
+      return pick;
+    };
+    // Is m een 'ondertoon' (de echte noot ligt hoger)? Dan ontbreken de oneven harmonischen 1, 3, 5 van m.
+    const isSubharmonic = (m) => {
+      const f0 = f0Of(m);
+      const odd = peakIn(post, f0) + peakIn(post, 3 * f0) + peakIn(post, 5 * f0);
+      const even = peakIn(post, 2 * f0) + peakIn(post, 4 * f0) + peakIn(post, 6 * f0);
+      return even > 0 && odd < 0.2 * even;
+    };
+    // Is de grondtoon zelf hoorbaar? Bij een 'ondertoon' van YIN is die er niet.
+    const hasFundamental = (m) => peakIn(post, f0Of(m)) >= 0.08 * postMax;
+    // Is de grondtoon van m zelf nieuw bij deze aanslag? Bij een echt gespeelde noot wel; bij een 'ondertoon'
+    // die YIN verzint (octaaf of octaaf + kwint onder de echte noot) zit daar geen nieuwe energie.
+    const fundNew = (m) => {
+      const f0 = f0Of(m);
+      return peakIn(diff, f0) >= 0.2 * Math.max(peakIn(diff, 2 * f0), peakIn(diff, 3 * f0), 1e-9) && peakIn(diff, f0) >= 0.03 * postMax;
+    };
+    return { newFrac, best, choose, confirms, present, bestOf, hasFundamental, isSubharmonic, fundNew };
   }
 
   // Geeft { flux, cd }: relatieve toename van de spectrale grootte, en de 'complex domain'-afwijking:
@@ -431,22 +479,46 @@ export class DetectorCore {
       // twijfelachtige metingen alleen gebruiken als er na 120 ms nog niets beters is
       const v = this.pending.votes.length || age < 0.12 ? this.pending.votes : this.pending.loose || [];
       // Zodra het venster helemaal na de aanslag ligt: welke toon kwam erbij?
-      if (age >= 0.06 && !this.pending.ana) {
+      // het spectrumvenster (~85 ms) moet helemaal na de aanslag liggen
+      if (age >= SPEC_WIN / this.sr + 0.012 && !this.pending.ana) {
         this.pending.ana = this.analyseAttack(this.pending.pre, this.bigSpectrum(0));
       }
       const ana = this.pending.ana;
       const y = v.length ? mode(v) : null;
-      // Eerst: is het een van de noten die de app nu verwacht? (betrouwbaarder dan blind zoeken)
-      const hit = ana ? this.expect.find((e) => ana.confirms(e, y)) : undefined;
-      if ((ana && (hit != null || v.length >= 2)) || v.length >= 3 || (age > 0.15 && (v.length || ana?.best != null))) {
-        // Anders: YIN hoort soms de snaar die nog naklinkt, of een octaaf ernaast; kies de toon
-        // die bij deze aanslag nieuw is en waarvan de harmonischen het best kloppen.
-        let m = hit ?? y;
-        if (ana && hit == null) m = ana.choose([y, ana.best]) ?? y ?? ana.best;
+      const strictY = this.pending.votes.length >= 2 ? mode(this.pending.votes) : null;
+      // 1. YIN zeker van een toon die bij deze aanslag NIEUW is: dat is de gespeelde noot.
+      //    (Zo kan een buurnoot nooit 'goedgerekend' worden omdat ze toevallig verwacht werd.)
+      const yinNew = ana && strictY != null && ana.newFrac(strictY) >= 0.3 ? strictY : null;
+      // 2. Anders: is het een van de noten die de app nu verwacht? (helpt als er snaren naklinken)
+      const hit = ana && yinNew == null ? this.expect.find((e) => ana.confirms(e, y)) : undefined;
+      if (ana || (age > 0.25 && v.length)) {
+        let m;
+        // YIN hoorde een ondertoon (octaaf of octaaf + kwint lager) van een verwachte noot die echt nieuw klinkt
+        // (Niet als die lagere toon zelf echt nieuw klinkt, met eigen oneven boventonen: dan werd hij echt
+        //  gespeeld, bv. de lage sol i.p.v. de hoge sol.)
+        const underHit = yinNew != null && !ana.fundNew(yinNew)
+          ? this.expect.find((e) => [12, 19, 24].includes(e - yinNew) && ana.confirms(e, yinNew)) : undefined;
+        if (underHit != null) m = underHit;
+        else if (yinNew != null) {
+          // YIN vergist zich soms een octaaf te laag als er meerdere snaren klinken: controleer de oneven harmonischen.
+          // YIN kan ook een 'ondertoon' kiezen (een octaaf, of een octaaf + kwint te laag). Dat herken je aan
+          // een ontbrekende grondtoon: neem dan de toon waarvan de boventonen de nieuwe energie het best verklaren.
+          m = yinNew;
+          if (ana.isSubharmonic(m)) m = ana.bestOf([m + 12, m + 19, m + 24].filter((c) => !ana.isSubharmonic(c))) ?? m;
+        }
+        else if (hit != null) m = hit;
+        // 3. Anders: kies de toon die bij deze aanslag nieuw is en waarvan de harmonischen het best kloppen.
+        else m = (ana && ana.choose([y, ana.best])) ?? y ?? ana?.best;
+        if (m == null) {
+          if (this.debug) this.emit({ type: 'debug', t: this.pending.time, votes: [...v], strict: this.pending.votes.length, y, best: ana?.best, m: 'GEEN' });
+          this.recentAttack = this.pending; this.pending = null; return;
+        }
         if (this.debug) this.emit({ type: 'debug', t: this.pending.time, votes: [...v], strict: this.pending.votes.length, y, best: ana?.best, ch: this.lastChoose?.join(' '), fy: ana && y != null ? +ana.newFrac(y).toFixed(2) : null, fb: ana?.best != null ? +ana.newFrac(ana.best).toFixed(2) : null, m });
         this.current = m;
         this.lastEmitted = m;
-        this.emit({ type: 'note', time: this.pending.time, midi: m, attack: true, strength: this.pending.strength });
+        // fresh: welk deel van deze toon (0..1) nieuw is bij de aanslag; laag = tik/ruis op een snaar die nog naklonk
+        const fresh = ana && m != null ? +ana.newFrac(m).toFixed(2) : null;
+        this.emit({ type: 'note', time: this.pending.time, midi: m, attack: true, strength: this.pending.strength, fresh });
         this.pending = null;
       } else if (age > 0.4) {
         // Geen duidelijke toon gevonden: onthoud de aanslag, de stabiele toon kan nog volgen.
