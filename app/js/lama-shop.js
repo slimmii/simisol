@@ -3,6 +3,51 @@
 // In de testmodus (?lamatest in de url) is alles van jou en wordt niets bewaard.
 import { SLOTS, ITEMS, ITEM, loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
 
+// ---------- overzetten naar een ander toestel ----------
+// Een code met je munten, spulletjes en kleren: LAMA-<base64 van de gegevens>-<controlegetal>.
+// Het controlegetal vangt tikfouten en half gekopieerde codes op. Bij het inlezen krijg je alle spulletjes erbij
+// (je verliest er nooit), je munten worden het hoogste van de twee (niet opgeteld, anders kan je munten maken door
+// heen en weer te kopiëren) en elke code werkt maar één keer per toestel.
+const SALT = 'simisol-lama';
+function checksum(str) { // FNV-1a, 6 hexcijfers
+  let h = 0x811c9dc5;
+  for (const ch of SALT + str) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h.toString(16).padStart(8, '0').slice(-6);
+}
+const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
+
+export function exportCode(w) {
+  const data = JSON.stringify({ v: 1, id: Math.random().toString(36).slice(2, 10), c: w.coins, o: w.owned, w: w.outfit });
+  const body = toB64(data);
+  return `LAMA-${body}-${checksum(body)}`;
+}
+
+export function parseCode(code) {
+  const m = code.replace(/\s+/g, '').match(/^LAMA-([A-Za-z0-9_-]+)-([0-9a-f]{6})$/i);
+  if (!m) throw new Error('Dat is geen lama-code. Ze begint met LAMA-.');
+  if (checksum(m[1]) !== m[2].toLowerCase()) throw new Error('De code klopt niet. Is ze volledig gekopieerd?');
+  const d = JSON.parse(fromB64(m[1]));
+  const owned = (d.o || []).filter((id) => ITEM[id]);
+  const outfit = Object.fromEntries(Object.entries(d.w || {}).filter(([s, id]) => ITEM[id]?.slot === s && owned.includes(id)));
+  return { id: String(d.id), coins: Math.max(0, Math.floor(+d.c || 0)), owned, outfit };
+}
+
+// Een code inlezen in de portemonnee w (in place). Geeft terug wat er bij kwam.
+export function importCode(w, code) {
+  const d = parseCode(code);
+  w.imported ||= [];
+  if (w.imported.includes(d.id)) throw new Error('Deze code is op dit toestel al gebruikt. Maak een nieuwe op het andere toestel.');
+  const added = d.owned.filter((id) => !w.owned.includes(id));
+  const coins = Math.max(w.coins, d.coins);
+  const gained = coins - w.coins;
+  w.owned.push(...added);
+  w.coins = coins;
+  w.outfit = { ...d.outfit };
+  w.imported.push(d.id);
+  return { added: added.length, gained };
+}
+
 
 /**
  * @param {{dialog: HTMLDialogElement, wallet: () => object, save: () => void, onChange: () => void, test: boolean}} o
@@ -18,6 +63,35 @@ export function initShop(o) {
   let raf = 0;
 
   $('.shop-test').classList.toggle('hidden', !o.test);
+  $('.shop-sync').classList.toggle('hidden', o.test); // in de testmodus is niets echt van jou
+
+  // overzetten: code maken en kopiëren, of een code van een ander toestel inlezen
+  const say = (msg, ok = true) => { const p = $('.sync-msg'); p.textContent = msg; p.classList.toggle('bad', !ok); };
+  $('.sync-make').onclick = () => {
+    const out = $('.sync-out');
+    out.value = exportCode(o.wallet());
+    out.parentElement.classList.remove('hidden');
+    out.select();
+    say('Kopieer deze code en plak ze op het andere toestel bij “Code inlezen”.');
+  };
+  $('.sync-copy').onclick = async () => {
+    const out = $('.sync-out');
+    try { await navigator.clipboard.writeText(out.value); } catch { out.select(); document.execCommand('copy'); }
+    say('Gekopieerd! 📋');
+  };
+  $('.sync-load').onclick = () => {
+    const code = $('.sync-in').value.trim();
+    if (!code) return say('Plak eerst een code.', false);
+    try {
+      const r = importCode(o.wallet(), code);
+      $('.sync-in').value = '';
+      say(`Gelukt! ${r.added} ${r.added === 1 ? 'nieuw spulletje' : 'nieuwe spulletjes'}` + (r.gained ? ` en ${r.gained} munten erbij.` : '.'));
+      tryOn = null;
+      changed();
+    } catch (e) {
+      say(e instanceof SyntaxError ? 'De code klopt niet. Is ze volledig gekopieerd?' : e.message, false);
+    }
+  };
   const tabs = $('.shop-tabs');
   for (const s of SLOTS) {
     const b = document.createElement('button');
@@ -161,6 +235,8 @@ export function initShop(o) {
     async open() {
       A = A || await loadLlama();
       tryOn = null; confirm = null;
+      $('.sync-out').parentElement.classList.add('hidden');
+      $('.sync-msg').textContent = '';
       render();
       d.showModal();
       if (!raf) raf = requestAnimationFrame(loop);

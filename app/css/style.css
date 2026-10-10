@@ -345,6 +345,18 @@ body.lama-full { overflow: hidden; }
 .shop-card button:disabled { opacity: .45; cursor: default; }
 .shop-card button.on:disabled { opacity: 1; }
 .shop-card:not(.owned) canvas { filter: saturate(.9); }
+.shop-sync { margin: 0 18px 18px; padding: 10px 14px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); }
+.shop-sync summary { cursor: pointer; font-weight: 800; color: var(--accent-ink); }
+.shop-sync .hint { margin: 8px 0; }
+.sync-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.sync-box { display: flex; gap: 8px; flex: 1; min-width: 220px; }
+.sync-row input { flex: 1; min-width: 0; font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); font-family: ui-monospace, Menlo, monospace; }
+.sync-row button { font: inherit; font-weight: 800; border: 0; border-radius: 10px; padding: 7px 14px; cursor: pointer;
+  background: var(--accent-soft); color: var(--accent-ink); }
+.sync-row button:hover { background: #fbdcbf; }
+.sync-msg { margin: 8px 0 0; font-weight: 700; color: var(--good); min-height: 1.2em; }
+.sync-msg.bad { color: var(--bad); }
 .gnote.is-missed .ghead { fill: var(--missed); }
 .gnote.is-coin:not(.is-missed):not(.is-wrong) .ghead { fill: #e8a200; }
 .gnote.is-coin:not(.is-missed):not(.is-wrong) .gstem, .gnote.is-coin:not(.is-missed):not(.is-wrong) .gledger { stroke: #e8a200; }

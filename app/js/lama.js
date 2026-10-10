@@ -4,7 +4,7 @@
 // lama meteen over het monster (+1 punt). Fout gespeeld, of de noot is de balk uit: het monster
 // botst tegen de lama (-1 leven). Na 3 botsingen is het spel uit.
 // Af en toe hangt er in plaats van een monster een munt in de lucht: speel die noot en de lama springt
-// en vangt de munt (voor de winkel). Mis je ze, dan vliegt ze weg; botsen doe je niet.
+// en vangt de munt (voor de winkel). Mis je ze, dan vliegt ze weg; botsen doe je niet. Onsterfelijk: geen munten.
 import { parseNote, soundingMidi, solfege, solfegeOf, describePosition } from './notes.js';
 import { loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
 import { World, MONSTERS } from './lama-world.js';
@@ -35,7 +35,7 @@ const E4 = 4 * 7 + 2; // onderste lijn
 const B4 = 4 * 7 + 6; // middelste lijn
 
 const COIN_Y = GROUND_Y - 165; // hoogte van de munten: daar zit de lama bovenaan haar sprong
-const COIN_CHANCE = 1 / 3; // kans op een munt na minstens één monster: gemiddeld 1 op 4 noten (nooit twee na elkaar)
+const COIN_CHANCE = 1 / 2; // kans op een munt na minstens één monster: gemiddeld 1 op 3 noten (nooit twee na elkaar)
 
 export class LamaGame {
   /**
@@ -119,7 +119,7 @@ export class LamaGame {
     while (last < this.beat + visible) {
       last += 1;
       this.lastFinger = this.lastFinger === 'm' ? 'i' : 'm';
-      const coin = last >= LEAD_BEATS + 2 && this.sinceCoin >= 1 && Math.random() < COIN_CHANCE;
+      const coin = !this.immortal() && last >= LEAD_BEATS + 2 && this.sinceCoin >= 1 && Math.random() < COIN_CHANCE;
       this.sinceCoin = coin ? 0 : this.sinceCoin + 1;
       this.notes.push({
         p: this.nextPitch(), beat: last, state: null, el: null, finger: this.lastFinger,
@@ -533,7 +533,8 @@ export class LamaGame {
         label(g, 'Speel de noot, dan springt de lama!', W / 2, 270, 34, '#fff');
         label(g, this.immortal() ? 'Fout of te laat = botsen. Onsterfelijk: je kan niet verliezen.'
           : `Fout of te laat = botsen. Je hebt ${this.maxLives} ${this.maxLives === 1 ? 'leven' : 'levens'}.`, W / 2, 320, 22, '#ffe066');
-        label(g, 'Een munt in de lucht? Speel die noot en de lama vangt ze!', W / 2, 360, 20, '#ffd84a');
+        label(g, this.immortal() ? 'Onsterfelijk: er zijn geen munten te verdienen.'
+          : 'Een munt in de lucht? Speel die noot en de lama vangt ze!', W / 2, 360, 20, '#ffd84a');
         label(g, 'Klik op ▶ Start', W / 2, 400, 22, '#fff');
       }
     }

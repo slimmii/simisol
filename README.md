@@ -59,9 +59,12 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   kokosnoot op het strand). De vellen staan in `art/llama-runner/enemies/`; `tools/make_enemies.py` knipt ze uit
   naar `app/img/lama/monsters/`.
   Soms hangt er in plaats van een monster een **munt** in de lucht (gouden noot). Speel die noot en de lama
-  springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. In de **🛍️ Winkel** koop je
+  springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. Gemiddeld is 1 op 3 noten een munt;
+  met *∞ onsterfelijk* zijn er geen munten. In de **🛍️ Winkel** koop je
   met munten spulletjes voor de lama: een vachtkleur, iets op het hoofd (de bloem, hoedjes, kroon…), een bril, iets rond
   de hals, iets op de rug (vleugels, gitaar, raket…) en een spoor (glitters, muzieknoten, regenboog…).
+  Met **💾 Overzetten** onderaan de winkel maak je een code (LAMA-…) die je op een ander toestel inleest om daar
+  je spulletjes en munten te krijgen.
   Per plek draagt de lama één ding; klik op iets om het eerst te passen. Verborgen **testmodus**: zet
   `?lamatest` achter de url (bv. `index.html?lamatest`). Dan is alles van jou om te proberen, kan je munten bijmaken en wordt er niets bewaard.
   De sprites zonder bloem en de ankerpunten per frame maak je met `tools/llama_unflower.py`.

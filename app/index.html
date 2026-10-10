@@ -118,7 +118,7 @@
         </div>
         <label class="switch lama-opt"><input type="checkbox" id="bigNameToggle" checked><span></span>Grote notennaam</label>
         <p class="hint lama-opt">Soms hangt er een <b>munt</b> 🪙 in de lucht in plaats van een monster. Speel die
-          noot en de lama springt en vangt ze. Mis je ze, dan vliegt ze weg (botsen doe je niet). Met munten koop je
+          noot en de lama springt en vangt ze. Mis je ze, dan vliegt ze weg (botsen doe je niet). Met ∞ onsterfelijk zijn er geen munten. Met munten koop je
           in de <b>🛍️ Winkel</b> hoedjes, brillen, vleugels, kleurtjes en meer voor de lama.</p>
       </div>
 
@@ -232,6 +232,20 @@
               <div class="shop-grid"></div>
             </div>
           </div>
+          <details class="shop-sync">
+            <summary>💾 Overzetten naar een ander toestel</summary>
+            <p class="hint">Maak hier een code met je munten en spulletjes en plak ze op het andere toestel bij
+              <b>Code inlezen</b>. Daar krijg je alle spulletjes erbij; je munten worden het hoogste van de twee.</p>
+            <div class="sync-row">
+              <button class="sync-make">Code maken</button>
+              <span class="sync-box hidden"><input class="sync-out" readonly aria-label="Je code"><button class="sync-copy">📋 Kopiëren</button></span>
+            </div>
+            <div class="sync-row">
+              <input class="sync-in" placeholder="Plak hier een code (LAMA-…)" aria-label="Code inlezen" spellcheck="false" autocomplete="off">
+              <button class="sync-load">Code inlezen</button>
+            </div>
+            <p class="sync-msg" aria-live="polite"></p>
+          </details>
         </dialog>
       </div>
 
