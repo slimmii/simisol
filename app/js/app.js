@@ -575,6 +575,12 @@ if (settings.lamaShop.coins == null) {
   settings.lamaShop = { coins: Math.max(0, Math.floor(points / 50) - spent) * 5, owned: settings.lamaShop.owned || [], outfit: settings.lamaShop.outfit || {} };
   save();
 }
+// De gitaar hing vroeger op de rug; nu heeft ze een eigen plek (zodat je ook vleugels of een rugzak kan dragen).
+if (settings.lamaShop.outfit.back === 'gitaar') {
+  delete settings.lamaShop.outfit.back;
+  settings.lamaShop.outfit.instrument = 'gitaar';
+  save();
+}
 const lamaWallet = LAMA_TEST
   ? { coins: 0, owned: [...ALL_ITEM_IDS], outfit: { ...settings.lamaShop.outfit } }
   : settings.lamaShop;

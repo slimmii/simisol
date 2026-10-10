@@ -12,6 +12,7 @@ export const SLOTS = [
   { id: 'eyes', name: 'Ogen', icon: '🕶️' },
   { id: 'neck', name: 'Hals', icon: '🧣' },
   { id: 'back', name: 'Rug', icon: '🎒' },
+  { id: 'instrument', name: 'Gitaar', icon: '🎸' },
   { id: 'trail', name: 'Spoor', icon: '✨' },
 ];
 
@@ -371,19 +372,6 @@ export const ITEMS = [
     line(g, 1, '#d6dceb', [-6, -6, -22, -22]); line(g, 1, '#d6dceb', [-6, -3, -20, -12]);
     g.restore();
   } },
-  { id: 'gitaar', slot: 'back', name: 'Gitaar', price: 15, zoom: 1, draw(g, a) {
-    // schuin op de rug: klankkast bij de schouders, de hals steekt omhoog naar achteren (weg van het hoofd)
-    line(g, 2.4, '#2f6fdc', [a.nr - 6, a.ny + 4, a.nl - 4, a.ny + 6, a.bx - 4, a.by + 16]);
-    g.save(); g.translate(a.nl - 12, a.by + 8); g.scale(-1, 1); g.rotate(-0.6);
-    paint(g, '#5b3519', () => g.roundRect(8, -3, 32, 6, 1));
-    paint(g, '#3a2214', () => g.roundRect(38, -4.5, 9, 9, 2));
-    for (let i = 0; i < 3; i++) { tiny(g, 41 + i * 2.5, -5.5, 1, '#ddd'); tiny(g, 41 + i * 2.5, 5.5, 1, '#ddd'); }
-    paint(g, '#d9893b', () => { g.moveTo(10, 0); g.bezierCurveTo(10, -12, -2, -10, -4, -5); g.bezierCurveTo(-8, -14, -22, -12, -22, 0); g.bezierCurveTo(-22, 12, -8, 14, -4, 5); g.bezierCurveTo(-2, 10, 10, 12, 10, 0); });
-    paint(g, '#3a2214', () => ell(g, 0, 0, 3.6, 3.6), false);
-    g.fillStyle = '#3a2214'; g.fillRect(-15, -4, 3, 8);
-    for (let i = -1.5; i <= 1.5; i += 1) line(g, 0.4, '#f4f0e6', [-14, i, 40, i]);
-    g.restore();
-  } },
   { id: 'rugzak', slot: 'back', name: 'Rugzak', price: 5, draw(g, a) {
     const x = a.bx + 2, y = a.by - 5;
     paint(g, '#2fa36b', () => g.roundRect(x - 11, y, 22, 24, 6));
@@ -411,6 +399,21 @@ export const ITEMS = [
     }
   } },
 
+  // gitaren (en familie): schuin over de schouder, zie guitar() hieronder
+  { id: 'gitaar', slot: 'instrument', name: 'Akoestische gitaar', price: 10, draw: guitar({ body: 'acoustic' }) },
+  { id: 'klassiek', slot: 'instrument', name: 'Klassieke gitaar', price: 10, draw: guitar({ body: 'acoustic', fill: '#eec07a', head: 'slotted', rosette: '#2f9e57', strap: '#8b2fc9' }) },
+  { id: 'ukelele', slot: 'instrument', name: 'Ukelele', price: 5, draw: guitar({ body: 'acoustic', size: 0.68, neck: 20, tuners: 4, fill: '#f2a65a', strap: '#ff7aa8' }) },
+  { id: 'elektrisch', slot: 'instrument', name: 'Elektrische gitaar', price: 10, draw: guitar({ body: 'strat', fill: '#e8473f', head: 'strat' }) },
+  { id: 'bas', slot: 'instrument', name: 'Basgitaar', price: 10, draw: guitar({ body: 'strat', fill: '#2f6fdc', size: 1.08, neck: 42, tuners: 4, head: 'strat', strap: '#2d2a3e' }) },
+  { id: 'banjo', slot: 'instrument', name: 'Banjo', price: 10, draw: guitar({ body: 'banjo', neck: 38, tuners: 5, strap: '#c0392b' }) },
+  { id: 'mandoline', slot: 'instrument', name: 'Mandoline', price: 10, draw: guitar({ body: 'mandolin', fill: '#b5651d', neck: 22, tuners: 8, strap: '#2fa36b' }) },
+  { id: 'flyingv', slot: 'instrument', name: 'Flying V', price: 15, draw: guitar({ body: 'flyingv', fill: '#f5f5f5', head: 'v', strap: '#1f1d2b' }) },
+  { id: 'vlammen', slot: 'instrument', name: 'Vlammengitaar', price: 15, draw: guitar({ body: 'strat', fill: '#1f1d2b', head: 'strat', deco: 'flames', strap: '#e8473f' }) },
+  { id: 'regenbooggitaar', slot: 'instrument', name: 'Regenbooggitaar', price: 15, draw: guitar({ body: 'acoustic', deco: 'rainbow', strap: '#9a6bff' }) },
+  { id: 'dubbelhals', slot: 'instrument', name: 'Dubbelhalsgitaar', price: 15, draw: guitar({ body: 'sg', fill: '#9e1b32', necks: 2, head: 'strat', strap: '#2d2a3e' }) },
+  { id: 'goud', slot: 'instrument', name: 'Gouden gitaar', price: 15, draw: guitar({ body: 'strat', fill: '#ffcf33', head: 'strat', deco: 'sparkle', strap: '#c98a00' }) },
+  { id: 'sterrengitaar', slot: 'instrument', name: 'Sterrengitaar', price: 15, draw: guitar({ body: 'star', fill: '#ffd84a', head: 'v', deco: 'sparkle', strap: '#8b2fc9' }) },
+
   // spoor
   { id: 'glitter', slot: 'trail', name: 'Glitters', price: 5, trail: { rate: 0.04, make: () => ({ kind: 'spark', color: pick(['#fff6a8', '#ffffff', '#ffd84a']), s: 5, life: 0.6, g: 0 }) } },
   { id: 'hartjes', slot: 'trail', name: 'Hartjes', price: 5, trail: { rate: 0.12, make: () => ({ kind: 'heart', s: 12, life: 0.9, g: -60 }) } },
@@ -423,6 +426,88 @@ export const ITEMS = [
 ];
 
 export const ITEM = Object.fromEntries(ITEMS.map((i) => [i.id, i]));
+
+// ---------- gitaren ----------
+// Allemaal op dezelfde plek: de riem over de hals, de klankkast bij de schouder en de kop schuin omhoog naar
+// achteren (weg van het hoofd). Getekend langs de x-as: de klankkast rond x = -8, de hals van x = 8 naar de kop.
+// spec: body (vorm), fill (kleur), size, neck (lengte), necks (1 of 2), tuners, head (kop), deco, strap, rosette.
+const BODY = {
+  acoustic: (g) => { g.moveTo(10, 0); g.bezierCurveTo(10, -12, -2, -10, -4, -5); g.bezierCurveTo(-8, -14, -22, -12, -22, 0); g.bezierCurveTo(-22, 12, -8, 14, -4, 5); g.bezierCurveTo(-2, 10, 10, 12, 10, 0); },
+  strat: (g) => {
+    g.moveTo(7, -4); g.quadraticCurveTo(13, -12, 4, -11); g.bezierCurveTo(-4, -10, -6, -13, -14, -13);
+    g.bezierCurveTo(-25, -13, -26, -4, -24, 0); g.bezierCurveTo(-26, 7, -22, 13, -13, 13);
+    g.bezierCurveTo(-5, 13, -3, 9, 2, 9); g.quadraticCurveTo(9, 9, 7, 4); g.closePath();
+  },
+  sg: (g) => {
+    g.moveTo(8, -9); g.lineTo(2, -15); g.quadraticCurveTo(-4, -10, -10, -14); g.quadraticCurveTo(-26, -16, -26, 0);
+    g.quadraticCurveTo(-26, 16, -10, 14); g.quadraticCurveTo(-4, 10, 2, 15); g.lineTo(8, 9); g.closePath();
+  },
+  flyingv: (g) => { g.moveTo(8, -3); g.lineTo(-24, -17); g.lineTo(-27, -11); g.lineTo(-11, 0); g.lineTo(-27, 11); g.lineTo(-24, 17); g.lineTo(8, 3); g.closePath(); },
+  mandolin: (g) => { g.moveTo(9, 0); g.bezierCurveTo(6, -13, -24, -15, -24, 0); g.bezierCurveTo(-24, 15, 6, 13, 9, 0); },
+  banjo: (g) => ell(g, -9, 0, 13, 13),
+  star: (g) => star(g, -9, 0, 17, 5, 0.5, 0),
+};
+
+function guitar(spec) {
+  const fill = spec.fill || '#d9893b', z = spec.size || 1, L = spec.neck || 32, nTun = spec.tuners || 6;
+  const necks = spec.necks === 2 ? [-4.5, 4.5] : [0];
+  return function draw(g, a, t) {
+    line(g, 2.4, spec.strap || '#2f6fdc', [a.nr - 6, a.ny + 4, a.nl - 4, a.ny + 6, a.bx - 4, a.by + 16]);
+    g.save();
+    g.translate(a.nl - 12, a.by + 8); g.scale(-1, 1); g.rotate(-0.6); g.scale(z, z);
+    // hals(en) en kop
+    for (const oy of necks) {
+      paint(g, '#5b3519', () => g.roundRect(6, oy - 3, L + 2, 6, 1));
+      for (let f = 12; f < L + 6; f += 6) line(g, 0.6, '#c8b08a', [f, oy - 2.6, f, oy + 2.6]);
+      const hx = L + 6;
+      if (spec.head === 'strat') paint(g, '#3a2214', () => { g.moveTo(hx, oy - 3); g.lineTo(hx + 12, oy - 6); g.quadraticCurveTo(hx + 15, oy - 4, hx + 12, oy - 1); g.lineTo(hx, oy + 3); g.closePath(); });
+      else if (spec.head === 'v') paint(g, '#1f1d2b', () => { g.moveTo(hx, oy - 3); g.lineTo(hx + 11, oy - 6); g.lineTo(hx + 8, oy); g.lineTo(hx + 11, oy + 6); g.lineTo(hx, oy + 3); g.closePath(); });
+      else {
+        paint(g, '#3a2214', () => g.roundRect(hx, oy - 4.5, 10, 9, 2));
+        if (spec.head === 'slotted') { g.fillStyle = '#1a0f08'; g.fillRect(hx + 2, oy - 2.5, 6, 1.6); g.fillRect(hx + 2, oy + 0.9, 6, 1.6); }
+      }
+      const half = Math.ceil(nTun / 2);
+      for (let i = 0; i < half; i++) tiny(g, hx + 2.5 + i * (7 / half), oy - 5.5, 1, '#e6e6e6');
+      for (let i = 0; i < nTun - half; i++) tiny(g, hx + 2.5 + i * (7 / half), oy + 5.5, 1, '#e6e6e6');
+    }
+    // klankkast
+    const body = () => BODY[spec.body](g);
+    if (spec.body === 'banjo') {
+      paint(g, '#c0c6cf', body);
+      paint(g, '#f6f1e6', () => ell(g, -9, 0, 10.5, 10.5));
+      for (let k = 0; k < 10; k++) { const an = (k / 10) * Math.PI * 2; tiny(g, -9 + Math.cos(an) * 11.8, Math.sin(an) * 11.8, 0.8, '#7d8590'); }
+    } else {
+      paint(g, fill, body);
+      g.save(); g.beginPath(); body(); g.clip();
+      if (spec.deco === 'rainbow') RAINBOW.forEach((c, k) => { g.fillStyle = c; g.fillRect(-30, -18 + k * 6, 45, 6); });
+      if (spec.deco === 'flames') {
+        for (const [y, s2] of [[-6, 1], [3, 0.8], [9, 0.6]]) {
+          paint(g, '#ff9a2a', () => { g.moveTo(-26, y - 5 * s2); g.quadraticCurveTo(-12, y - 10 * s2, 2, y - 2 * s2); g.quadraticCurveTo(-8, y, -2, y + 4 * s2); g.quadraticCurveTo(-14, y + 2 * s2, -26, y + 5 * s2); }, false);
+          paint(g, '#ffe066', () => { g.moveTo(-26, y - 2 * s2); g.quadraticCurveTo(-14, y - 5 * s2, -6, y); g.quadraticCurveTo(-14, y + 2 * s2, -26, y + 2 * s2); }, false);
+        }
+      }
+      g.restore();
+      if (spec.body !== 'acoustic' && spec.body !== 'mandolin') { // elektrisch: elementen en knoppen
+        g.fillStyle = '#1f1d2b';
+        for (const px of [-3, -9, -15]) for (const oy of necks) g.fillRect(px, oy - 3, 2.6, 6);
+        tiny(g, -19, 7, 1.6, '#e6e6e6'); tiny(g, -15, 9, 1.6, '#e6e6e6');
+      } else {
+        paint(g, '#3a2214', () => ell(g, spec.body === 'mandolin' ? -4 : 0, 0, spec.body === 'mandolin' ? 2.6 : 3.6, 3.6), false);
+        g.beginPath(); ell(g, 0, 0, 5, 5); g.lineWidth = 1; g.strokeStyle = spec.rosette || '#8a5a32'; if (spec.body === 'acoustic') g.stroke();
+      }
+    }
+    g.fillStyle = '#3a2214'; g.fillRect(-16, -4, 3, 8); // kam
+    for (const oy of necks) for (let i = -1.5; i <= 1.5; i += 1) line(g, 0.4, '#f4f0e6', [-15, oy + i, L + 6, oy + i]);
+    if (spec.deco === 'sparkle') {
+      g.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5);
+      paint(g, '#fff', () => star(g, -16, -8, 3.5, 4, 0.3), false);
+      g.globalAlpha = 0.5 + 0.5 * Math.cos(t * 4);
+      paint(g, '#fff', () => star(g, -4, 8, 2.8, 4, 0.3), false);
+      g.globalAlpha = 1;
+    }
+    g.restore();
+  };
+}
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const RAINBOW = ['#ff5a5a', '#ff9a2a', '#ffe066', '#5fd36b', '#4fa8f5', '#9a6bff'];
 
@@ -464,7 +549,7 @@ export function drawLlama(g, A, sheet, i, x, y, s, outfit = {}, t = 0) {
   const sm = A.meta[sheet], img = A.img['llama_' + sheet];
   const cw = sm.cellW, ch = sm.cellH;
   const a = anchors(sm.anchors[i], cw);
-  const worn = ['back', 'neck', 'eyes', 'head'].map((k) => ITEM[outfit[k]]).filter((it) => it?.draw);
+  const worn = ['back', 'instrument', 'neck', 'eyes', 'head'].map((k) => ITEM[outfit[k]]).filter((it) => it?.draw);
   const fur = ITEM[outfit.fur];
   g.save();
   g.translate(x, y);
@@ -481,7 +566,7 @@ export function drawLlama(g, A, sheet, i, x, y, s, outfit = {}, t = 0) {
 }
 
 // Iets groter tekenen dan de lama zelf, rond het ankerpunt van de plek: anders zie je het nauwelijks in het spel.
-const ZOOM = { head: ['hx', 'hy', 1.35], eyes: ['ex', 'ey', 1.2], neck: ['nx', 'ny', 1], back: ['bx', 'by', 1.45] };
+const ZOOM = { head: ['hx', 'hy', 1.35], eyes: ['ex', 'ey', 1.2], neck: ['nx', 'ny', 1], back: ['bx', 'by', 1.45], instrument: ['bx', 'by', 1.2] };
 function drawItem(g, it, a, t, img) {
   const [kx, ky, z0] = ZOOM[it.slot], z = it.zoom ?? z0;
   g.save();

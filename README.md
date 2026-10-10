@@ -62,7 +62,8 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. Gemiddeld is 1 op 3 noten een munt;
   met *∞ onsterfelijk* zijn er geen munten. In de **🛍️ Winkel** koop je
   met munten spulletjes voor de lama: een vachtkleur, iets op het hoofd (de bloem, hoedjes, kroon…), een bril, iets rond
-  de hals, iets op de rug (vleugels, gitaar, raket…) en een spoor (glitters, muzieknoten, regenboog…).
+  de hals, iets op de rug (vleugels, rugzak, raket…), een **gitaar** (akoestisch, elektrisch, bas, ukelele, banjo,
+  Flying V, dubbelhals…) en een spoor (glitters, muzieknoten, regenboog…).
   Met **💾 Overzetten** onderaan de winkel maak je een code (LAMA-…) die je op een ander toestel inleest om daar
   je spulletjes en munten te krijgen.
   Per plek draagt de lama één ding; klik op iets om het eerst te passen. Verborgen **testmodus**: zet
