@@ -414,6 +414,32 @@ export const ITEMS = [
   { id: 'goud', slot: 'instrument', name: 'Gouden gitaar', price: 15, draw: guitar({ body: 'strat', fill: '#ffcf33', head: 'strat', deco: 'sparkle', strap: '#c98a00' }) },
   { id: 'sterrengitaar', slot: 'instrument', name: 'Sterrengitaar', price: 15, draw: guitar({ body: 'star', fill: '#ffd84a', head: 'v', deco: 'sparkle', strap: '#8b2fc9' }) },
 
+  // sterrenbeloningen: niet te koop, je krijgt ze met sterren (stars = zoveel sterren samen, zie lama-journey.js)
+  { id: 'notenbril', slot: 'eyes', name: 'Notenbril', stars: 5, draw(g, a) {
+    const x = a.ex, y = a.ey;
+    line(g, 1.6, '#2d2a3e', [x - 8, y - 3, a.fx - 4, a.fy + 6]);
+    g.beginPath(); g.arc(x, y, 7.5, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.55)'; g.fill();
+    g.lineWidth = 2; g.strokeStyle = '#2d2a3e'; g.stroke();
+    g.font = '900 13px Nunito, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = '#2f6fdc'; g.fillText('♪', x, y + 0.5);
+  } },
+  { id: 'sterrensjaal', slot: 'neck', name: 'Sterrensjaal', stars: 10, draw(g, a, t) {
+    const l = a.nl - 1, r = a.nr + 1, y = a.ny, w = Math.sin(t * 6) * 3;
+    paint(g, '#24306e', () => { g.moveTo(l + 4, y + 2); g.quadraticCurveTo(l - 4 + w, y + 10, l - 10 + w, y + 22); g.lineTo(l - 2 + w, y + 24); g.quadraticCurveTo(l + 2, y + 12, l + 10, y + 4); g.closePath(); });
+    paint(g, '#2f3f8f', () => { g.moveTo(l, y - 5); g.lineTo(r, y - 3); g.quadraticCurveTo(r + 2, y + 2, r, y + 6); g.lineTo(l, y + 4); g.quadraticCurveTo(l - 2, y - 1, l, y - 5); });
+    for (let x = l + 6, k = 0; x < r - 2; x += 9, k++) paint(g, '#ffd84a', () => star(g, x, y + (k % 2 ? 1 : -1), 3), false);
+    paint(g, '#ffd84a', () => star(g, l - 6 + w, y + 18, 2.5), false);
+  } },
+  { id: 'meesterkroon', slot: 'head', name: 'Meesterkroon', stars: 20, draw(g, a, t) {
+    const x = a.hx, y = a.hy + 4;
+    paint(g, '#9a6bff', () => poly(g, [x - 15, y, x + 15, y, x + 16, y - 18, x + 8, y - 9, x, y - 22, x - 8, y - 9, x - 16, y - 18]));
+    paint(g, '#ffd84a', () => g.rect(x - 15, y - 4, 30, 4));
+    paint(g, '#ffd84a', () => star(g, x, y - 12, 5), false);
+    for (const [dx, sp] of [[-13, 5], [13, 4]]) { g.globalAlpha = 0.5 + 0.5 * Math.sin(t * sp); paint(g, '#fff', () => star(g, x + dx, y - 22, 3, 4, 0.3), false); }
+    g.globalAlpha = 1;
+  } },
+  { id: 'meestergitaar', slot: 'instrument', name: 'Meestergitaar', stars: 30, draw: guitar({ body: 'flyingv', fill: '#8b2fc9', head: 'v', deco: 'sparkle', strap: '#ffcf33' }) },
+
   // spoor
   { id: 'glitter', slot: 'trail', name: 'Glitters', price: 5, trail: { rate: 0.04, make: () => ({ kind: 'spark', color: pick(['#fff6a8', '#ffffff', '#ffd84a']), s: 5, life: 0.6, g: 0 }) } },
   { id: 'hartjes', slot: 'trail', name: 'Hartjes', price: 5, trail: { rate: 0.12, make: () => ({ kind: 'heart', s: 12, life: 0.9, g: -60 }) } },

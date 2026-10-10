@@ -58,6 +58,14 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   Elk landschap heeft zijn **eigen monsters** (bv. sneeuwman, uil en pinguïn in de sneeuw; krab, meeuw en
   kokosnoot op het strand). De vellen staan in `art/llama-runner/enemies/`; `tools/make_enemies.py` knipt ze uit
   naar `app/img/lama/monsters/`.
+  **🗺️ Reis**: je begint in de weide met de losse snaren (sol, si, mi). Elk volgend landschap leert je één nieuwe
+  noot (herfstbos: re, sneeuwland: la, sterrennacht: do′, snoepland: fa, strand: sol′, jungle: re, woestijn: mi,
+  vulkaanland: fa en do). Na 30 juiste noten (en minstens 80% juist) wacht er aan de grens een **poortwachter** 👑:
+  speel 5 keer de nieuwe noot en je bent erdoor (+15 munten, zijn wolkjes kosten geen leven). Een nieuwe noot komt
+  daarna nog even extra vaak, met haar naam erbij. Elke noot krijgt tot 3 **sterren** (hoe vaak juist); met sterren
+  krijg je spulletjes die je niet kan kopen (notenbril, sterrensjaal, meesterkroon, meestergitaar).
+  **🎯 Vrij oefenen**: kies zelf je noten (bv. de leerkracht); minder munten, geen poortwachters.
+  De regels van de reis staan in `app/js/lama-journey.js`.
   Soms hangt er in plaats van een monster een **munt** in de lucht (gouden noot). Speel die noot en de lama
   springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. Gemiddeld is 1 op 3 noten een munt;
   met *∞ onsterfelijk* zijn er geen munten. In de **🛍️ Winkel** koop je

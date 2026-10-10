@@ -5,6 +5,8 @@
 // botst tegen de lama (-1 leven). Na 3 botsingen is het spel uit.
 // Af en toe hangt er in plaats van een monster een munt in de lucht: speel die noot en de lama springt
 // en vangt de munt (voor de winkel). Mis je ze, dan vliegt ze weg; botsen doe je niet. Onsterfelijk: geen munten.
+// Op de reis staat er aan de grens met een nieuw landschap een poortwachter (queueBoss): speel zijn noot
+// (de nieuwe noot) een paar keer juist en hij is verslagen. Zijn wolkjes kosten geen leven.
 import { parseNote, soundingMidi, solfege, solfegeOf, describePosition } from './notes.js';
 import { loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
 import { World, MONSTERS } from './lama-world.js';
@@ -36,6 +38,8 @@ const B4 = 4 * 7 + 6; // middelste lijn
 
 const COIN_Y = GROUND_Y - 165; // hoogte van de munten: daar zit de lama bovenaan haar sprong
 const COIN_CHANCE = 1 / 2; // kans op een munt na minstens één monster: gemiddeld 1 op 3 noten (nooit twee na elkaar)
+const BOSS_X = 770; // daar blijft de poortwachter staan
+const BOSS_H = 150;
 
 export class LamaGame {
   /**
@@ -59,6 +63,11 @@ export class LamaGame {
     this.best = 0;
     this.onBest = null; // (best) => void, om het record te bewaren
     this.onCoin = null; // () => void, als de lama een munt vangt
+    this.onJudge = null; // (noot, juist) => void, voor elke beslissing (voor sterren en de voortgang op de reis)
+    this.onBossWon = null; // (boss) => void
+    this.coinChance = COIN_CHANCE;
+    this.fresh = {}; // noot -> hoe vaak ze nog extra vaak (en met naam) moet komen, net nadat ze nieuw is
+    this.boss = null;
     this.outfit = {}; // wat de lama draagt (zie lama-style.js)
     this.trailT = 0;
     this.img = {};
@@ -95,6 +104,7 @@ export class LamaGame {
     this.lastFinger = 'i';
     this.sinceCoin = 0;
     this.coins = 0; // munten gevangen in dit spel
+    this.boss = null;
     this.lastHit = null;
     this.player = { y: GROUND_Y, jump: null, queue: [], landT: 1, walk: 0, hurt: 0 }; // queue: noten om over te springen
     this.particles = [];
@@ -105,9 +115,17 @@ export class LamaGame {
     this.say('');
   }
 
+  // Willekeurige noot uit de pool; een net nieuwe noot (fresh) komt drie keer zo vaak.
+  pickPitch() {
+    const w = this.pool.map((p) => (this.fresh[p] > 0 ? 3 : 1));
+    let r = Math.random() * w.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < w.length; i++) if ((r -= w[i]) < 0) return this.pool[i];
+    return this.pool[0];
+  }
+
   nextPitch() {
     let p, tries = 0;
-    do { p = this.pool[Math.floor(Math.random() * this.pool.length)]; tries++; }
+    do { p = this.pickPitch(); tries++; }
     while (this.pool.length > 1 && this.prev.length >= 2 && this.prev.every((x) => x === p) && tries < 10);
     this.prev = [...this.prev.slice(-1), p];
     return p;
@@ -119,14 +137,72 @@ export class LamaGame {
     while (last < this.beat + visible) {
       last += 1;
       this.lastFinger = this.lastFinger === 'm' ? 'i' : 'm';
-      const coin = !this.immortal() && last >= LEAD_BEATS + 2 && this.sinceCoin >= 1 && Math.random() < COIN_CHANCE;
+      const b = this.boss;
+      if (b && !b.won) { // poortwachter: al zijn noten zijn de nieuwe noot, met naam erbij
+        this.notes.push({
+          p: b.notes[b.made++ % b.notes.length], beat: last, state: null, el: null, finger: this.lastFinger,
+          kind: b.minion, boss: true, showName: true, t: Math.random() * 6,
+        });
+        continue;
+      }
+      const coin = !this.immortal() && last >= LEAD_BEATS + 2 && this.sinceCoin >= 1 && Math.random() < this.coinChance;
       this.sinceCoin = coin ? 0 : this.sinceCoin + 1;
+      const p = this.nextPitch();
+      const fresh = this.fresh[p] > 0;
+      if (fresh) this.fresh[p]--;
       this.notes.push({
-        p: this.nextPitch(), beat: last, state: null, el: null, finger: this.lastFinger,
+        p, beat: last, state: null, el: null, finger: this.lastFinger, showName: fresh,
         // het monster hoort bij het landschap waar het staat
-        kind: coin ? 'coin' : this.world.monsterAt(this.dist + PLAYER_X + (last - this.beat) * PX_PER_BEAT), t: Math.random() * 6,
+        kind: coin ? 'coin' : this.world.monsterAt(this.worldX(last)), t: Math.random() * 6,
       });
     }
+  }
+
+  // Waar (afgelegde weg) de noot op tel 'beat' op de bodem staat.
+  worldX(beat) { return this.dist + PLAYER_X + (beat - this.beat) * PX_PER_BEAT; }
+
+  // ---------- poortwachter ----------
+  // b = {notes: [nieuwe noten], need: aantal keer juist, monster: id van de wachter, minion: id van zijn wolkjes, name}
+  queueBoss(b) {
+    if (this.boss) return;
+    this.boss = { ...b, hits: 0, made: 0, won: false, x: W + 140, flash: 0, dieT: 0 };
+    this.banner = { text: `Een poortwachter! Speel ${b.notes.map(solfegeOf).join(' en ')}`, life: 3.5 };
+    this.say(`De poortwachter van ${b.name} laat je pas door als je ${b.need} keer ${b.notes.map(solfegeOf).join('/')} speelt.`);
+  }
+
+  hitBoss(n) {
+    const b = this.boss;
+    b.hits++;
+    b.flash = 0.35;
+    for (let i = 0; i < 12; i++) { // een straal sterretjes van de lama naar de wachter
+      const u = i / 12;
+      this.particles.push({ kind: 'spark', x: PLAYER_X + u * (b.x - PLAYER_X), y: GROUND_Y - 80 - Math.sin(u * Math.PI) * 60, vx: 0, vy: -20, g: 0, life: 0.5 + u * 0.2, color: '#ffe066', s: 7, rot: 0 });
+    }
+    this.floaters.push({ x: b.x, y: GROUND_Y - BOSS_H - 50, text: `${b.hits}/${b.need}`, life: 0.9 });
+    if (b.hits >= b.need) this.winBoss();
+  }
+
+  winBoss() {
+    const b = this.boss;
+    b.won = true;
+    for (let i = 0; i < 40; i++) {
+      const a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 260;
+      this.particles.push({ kind: 'confetti', x: b.x, y: GROUND_Y - BOSS_H / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 150, g: 400, life: 1.4, rot: a,
+        color: ['#ff5a8a', '#5ec8ff', '#ffe066', '#7ee08a', '#c79bff'][i % 5], s: 8 });
+    }
+    // de app maakt de noot vrij, geeft de munten en zet het volgende landschap klaar
+    const coins = this.onBossWon?.(b) || 0;
+    if (coins) this.floaters.push({ x: b.x + 20, y: GROUND_Y - BOSS_H - 30, text: `+${coins}`, life: 2.2, coin: true });
+    this.say(coins ? `Poortwachter verslagen! +${coins} munten 🪙` : 'Poortwachter verslagen!');
+    // de wolkjes die nog komen, worden gewone noten (met de nieuwe noot erbij)
+    for (const n of this.notes) {
+      if (!n.boss || n.state) continue;
+      n.boss = false; n.showName = false;
+      n.p = this.nextPitch();
+      n.kind = this.world.monsterAt(this.worldX(n.beat));
+      n.el?.remove(); n.el = null;
+    }
+    this.sendExpect();
   }
 
   // De noot die nu aan de beurt is: de eerste die nog niet beslist is.
@@ -224,8 +300,9 @@ export class LamaGame {
     const acc = parseNote(n.p).acc;
     if (acc) g.appendChild(text(acc === '#' ? '♯' : '♭', -16, y + 5, 'gacc'));
     if (this.showFingers) g.appendChild(text(n.finger, 0, this.lineY(0) - 13, 'gfinger'));
-    if (this.showNames) g.appendChild(text(solfegeOf(n.p), 0, base + 24, 'gname'));
-    n.tag = text('', 0, base + (this.showNames ? 36 : 26), 'gtag');
+    const named = this.showNames || n.showName; // nieuwe noten en die van de poortwachter: altijd met naam
+    if (named) g.appendChild(text(solfegeOf(n.p), 0, base + 24, 'gname'));
+    n.tag = text('', 0, base + (named ? 36 : 26), 'gtag');
     g.appendChild(n.tag);
     this.layer.appendChild(g);
     return g;
@@ -352,9 +429,15 @@ export class LamaGame {
     }
     for (const n of this.notes) n.t += dt;
     // een nieuw landschap onder de pootjes: even de naam tonen
-    const k = this.world.indexAt(this.dist + PLAYER_X);
-    if (this.biomeNow != null && k !== this.biomeNow && this.running) this.banner = { text: this.world.biome(k).name, life: 3 };
-    this.biomeNow = k;
+    const here = this.world.biomeAt(this.dist + PLAYER_X);
+    if (this.biomeNow && here !== this.biomeNow && this.running) this.banner = { text: here.name, life: 3 };
+    this.biomeNow = here;
+    if (this.boss) {
+      const b = this.boss;
+      b.flash = Math.max(0, b.flash - dt);
+      if (b.won) { b.dieT += dt; if (b.dieT > 1.2) this.boss = null; }
+      else b.x = Math.max(BOSS_X, b.x - 160 * dt); // komt binnen en blijft dan staan
+    }
     if (this.banner) { this.banner.life -= dt; if (this.banner.life <= 0) this.banner = null; }
     if (!this.over) pl.walk += dt * Math.max(0.5, this.running ? this.bpm / 30 : 0.5);
 
@@ -381,6 +464,7 @@ export class LamaGame {
         if (n.contactAt == null) n.contactAt = now;
         if (now - n.contactAt < GRACE) continue;
         n.state = 'missed'; n.wrongText = 'gemist'; n.bumped = true; n.lostT = n.t;
+        this.judge(n, false);
         this.say('Munt gemist…');
         this.sendExpect();
         continue;
@@ -388,12 +472,18 @@ export class LamaGame {
       if (n.contactAt == null) n.contactAt = now;
       // even wachten: de herkenning van een tokkel die nét op tijd was, heeft wat tijd nodig
       if (n.state !== 'wrong' && now - n.contactAt < GRACE) continue;
-      if (!n.state) { n.state = 'missed'; n.wrongText = 'te laat'; }
-      this.bump(n);
+      if (!n.state) { n.state = 'missed'; n.wrongText = 'te laat'; this.judge(n, false); }
+      if (n.boss) { // een wolkje van de poortwachter: even schrikken, maar geen leven kwijt
+        n.bumped = true; n.poof = true;
+        this.player.hurt = 0.5; this.shake = 0.2;
+        this.say(`Bijna! De poortwachter wil ${solfegeOf(n.p)} horen (${describePosition(n.p)}).`);
+      } else this.bump(n);
       this.sendExpect();
     }
     while (this.notes.length && this.xOf(this.notes[0]) < -120) this.notes.shift().el?.remove();
   }
+
+  judge(n, ok) { this.onJudge?.(n.p, ok, n); }
 
   catchCoin(n, x) {
     n.caught = true;
@@ -453,6 +543,7 @@ export class LamaGame {
     if (d < CONTACT_PX && ev.midi === soundingMidi(tgt.p)) return;
     if (ev.midi === soundingMidi(tgt.p) && tgt.kind === 'coin') { // springen om de munt te vangen, geen punt
       tgt.state = 'hit';
+      this.judge(tgt, true);
       this.lastHit = { midi: ev.midi, time: ev.time };
       this.player.queue.push(tgt);
       this.sendExpect();
@@ -460,6 +551,8 @@ export class LamaGame {
     }
     if (ev.midi === soundingMidi(tgt.p)) {
       tgt.state = 'hit';
+      this.judge(tgt, true);
+      if (tgt.boss && this.boss && !this.boss.won) this.hitBoss(tgt);
       this.lastHit = { midi: ev.midi, time: ev.time };
       this.score++;
       if (!this.immortal() && this.score > this.best) { this.best = this.score; this.onBest?.(this.best); }
@@ -477,7 +570,9 @@ export class LamaGame {
     tgt.state = 'wrong';
     tgt.played = solfege(ev.midi + 12);
     tgt.wrongText = `fout: ${tgt.played}`;
-    if (tgt.kind === 'coin') { tgt.lostT = tgt.t; this.say(`Fout: ${tgt.played}. De munt vliegt weg…`); }
+    this.judge(tgt, false);
+    if (tgt.boss) this.say(`Fout: ${tgt.played}. De poortwachter wil ${solfegeOf(tgt.p)} horen.`);
+    else if (tgt.kind === 'coin') { tgt.lostT = tgt.t; this.say(`Fout: ${tgt.played}. De munt vliegt weg…`); }
     else this.say(`Fout: ${tgt.played}. De lama gaat botsen…`);
     this.sendExpect();
   }
@@ -504,6 +599,7 @@ export class LamaGame {
       label(g, this.banner.text, W / 2, 340, 38, '#fff6c8');
       g.globalAlpha = 1;
     }
+    if (this.boss) this.drawBoss(now);
     for (const p of this.particles) if (p.kind) drawParticle(g, p, this.img); // spoor: achter de lama
     this.drawLlama(now);
     if (this.bigName && this.running) this.drawBigName();
@@ -591,6 +687,36 @@ export class LamaGame {
     g.drawImage(im, -w / 2, -h / 2, w, h);
     g.restore();
     if (n.state === 'wrong') label(this.g, '!', x, cy - h / 2 - 16, 30, '#dc3b3b');
+  }
+
+  // De poortwachter: een groot monster van het volgende landschap, met kroon en levensbolletjes.
+  drawBoss(now) {
+    const g = this.g, b = this.boss, def = MONSTERS[b.monster], im = this.world.monster[b.monster];
+    if (!im) return;
+    const k = b.won ? Math.max(0, 1 - b.dieT / 1.2) : 1;
+    const h = BOSS_H * k, w = (im.width * h) / im.height;
+    const x = b.x + (b.flash > 0 ? Math.sin(now * 80) * 5 : 0), y = GROUND_Y - h / 2 + Math.sin(now * 3) * 3;
+    g.save();
+    g.globalAlpha = k;
+    g.translate(x, y);
+    if (def.flip) g.scale(-1, 1);
+    g.drawImage(im, -w / 2, -h / 2, w, h);
+    if (b.flash > 0) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = b.flash * 1.5; g.drawImage(im, -w / 2, -h / 2, w, h); }
+    g.restore();
+    if (b.won) return;
+    // kroon
+    const cy = y - h / 2 - 6;
+    g.beginPath();
+    g.moveTo(x - 20, cy + 8); g.lineTo(x - 22, cy - 10); g.lineTo(x - 10, cy); g.lineTo(x, cy - 14); g.lineTo(x + 10, cy); g.lineTo(x + 22, cy - 10); g.lineTo(x + 20, cy + 8);
+    g.closePath(); g.fillStyle = '#ffcf33'; g.fill(); g.lineWidth = 2.5; g.strokeStyle = '#5a3530'; g.stroke();
+    // levensbolletjes: hoeveel keer nog
+    const left = b.need - b.hits, r = 7, gap = 18, x0 = x - ((b.need - 1) * gap) / 2;
+    for (let i = 0; i < b.need; i++) {
+      g.beginPath(); g.arc(x0 + i * gap, cy - 30, r, 0, Math.PI * 2);
+      g.fillStyle = i < left ? '#ff5a8a' : 'rgba(255,255,255,.35)'; g.fill();
+      g.lineWidth = 2; g.strokeStyle = '#3a2350'; g.stroke();
+    }
+    label(g, 'Poortwachter', x, cy - 54, 20, '#fff6c8');
   }
 
   // Munt in de lucht: draait en zweeft. Gemist of fout: ze vliegt omhoog weg.

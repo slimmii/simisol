@@ -105,6 +105,18 @@
 
       <!-- Lama-spel -->
       <div class="pane hidden" id="pane-lama">
+        <div class="lama-mode" role="group" aria-label="Spelvorm">
+          <button id="lamaModeReis">🗺️ Reis</button><button id="lamaModeVrij">🎯 Vrij oefenen</button>
+        </div>
+        <div class="lama-journey" id="lamaJourney">
+          <p class="hint">Elk landschap leert je een <b>nieuwe noot</b>. Speel je noten goed, dan wacht er een
+            <b>poortwachter</b> 👑: speel 5 keer de nieuwe noot en hij laat je door (+15 munten).
+            Je hebt <b>⭐ <span id="lStars">0</span></b> sterren.</p>
+          <ol class="lama-map" id="lamaMap"></ol>
+          <button class="btn secondary hidden" id="lamaTestGate">🧪 Test: meteen naar de poortwachter</button>
+        </div>
+        <p class="hint hidden" id="lamaFreeHint">Kies zelf je noten hieronder. Er zijn minder munten dan op de reis
+          en geen poortwachters; je sterren tellen wel.</p>
         <p class="hint">De lama loopt vanzelf. Boven elk monster staat een noot. Speel de noot
           terwijl ze in de <b>blauwe balk</b> staat, dan <b>springt</b> de lama erover (+1 punt).
           Een <b>foute</b> noot, of de noot is de balk uit: de lama botst en verliest een leven.
@@ -197,6 +209,7 @@
         <div class="game-hud">
           <div class="hud-streak"><span class="lbl">Punten</span><b id="lScore">0</b></div>
           <div class="hud-small"><span class="lbl">Record</span><b id="lBest">0</b></div>
+          <div class="hud-small hud-gate hidden" id="lGateWrap" title="Juiste noten tot de poortwachter"><span class="lbl">Poort</span><b id="lGate">0/30</b></div>
           <div class="hud-small hud-coins" title="Munten vang je in de lucht"><span class="lbl">Munten</span>
             <b><img src="img/lama/coin.png" alt=""><span id="lCoins">0</span></b></div>
           <div class="hud-lives"><span class="lbl" id="lLivesLbl">Levens</span>

@@ -2,6 +2,7 @@
 // wallet = { coins, owned: [id], outfit: {slot: id} }. Munten vang je in het lama-spel.
 // In de testmodus (?lamatest in de url) is alles van jou en wordt niets bewaard.
 import { SLOTS, ITEMS, ITEM, loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
+import { mergeJourney } from './lama-journey.js';
 
 // ---------- overzetten naar een ander toestel ----------
 // Een code met je munten, spulletjes en kleren: LAMA-<base64 van de gegevens>-<controlegetal>.
@@ -17,8 +18,10 @@ function checksum(str) { // FNV-1a, 6 hexcijfers
 const toB64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
-export function exportCode(w) {
-  const data = JSON.stringify({ v: 1, id: Math.random().toString(36).slice(2, 10), c: w.coins, o: w.owned, w: w.outfit });
+// j = de reis (hoe ver en de sterren per noot) gaat mee in de code.
+export function exportCode(w, j) {
+  const data = JSON.stringify({ v: 1, id: Math.random().toString(36).slice(2, 10), c: w.coins, o: w.owned, w: w.outfit,
+    j: j ? { s: j.stage, st: j.stars } : undefined });
   const body = toB64(data);
   return `LAMA-${body}-${checksum(body)}`;
 }
@@ -29,12 +32,12 @@ export function parseCode(code) {
   if (checksum(m[1]) !== m[2].toLowerCase()) throw new Error('De code klopt niet. Is ze volledig gekopieerd?');
   const d = JSON.parse(fromB64(m[1]));
   const owned = (d.o || []).filter((id) => ITEM[id]);
-  const outfit = Object.fromEntries(Object.entries(d.w || {}).filter(([s, id]) => ITEM[id]?.slot === s && owned.includes(id)));
-  return { id: String(d.id), coins: Math.max(0, Math.floor(+d.c || 0)), owned, outfit };
+  const outfit = Object.fromEntries(Object.entries(d.w || {}).filter(([s, id]) => ITEM[id]?.slot === s && (owned.includes(id) || ITEM[id].stars)));
+  return { id: String(d.id), coins: Math.max(0, Math.floor(+d.c || 0)), owned, outfit, journey: d.j };
 }
 
 // Een code inlezen in de portemonnee w (in place). Geeft terug wat er bij kwam.
-export function importCode(w, code) {
+export function importCode(w, code, j) {
   const d = parseCode(code);
   w.imported ||= [];
   if (w.imported.includes(d.id)) throw new Error('Deze code is op dit toestel al gebruikt. Maak een nieuwe op het andere toestel.');
@@ -45,6 +48,7 @@ export function importCode(w, code) {
   w.coins = coins;
   w.outfit = { ...d.outfit };
   w.imported.push(d.id);
+  if (j) mergeJourney(j, d.journey);
   return { added: added.length, gained };
 }
 
@@ -69,7 +73,7 @@ export function initShop(o) {
   const say = (msg, ok = true) => { const p = $('.sync-msg'); p.textContent = msg; p.classList.toggle('bad', !ok); };
   $('.sync-make').onclick = () => {
     const out = $('.sync-out');
-    out.value = exportCode(o.wallet());
+    out.value = exportCode(o.wallet(), o.journey?.());
     out.parentElement.classList.remove('hidden');
     out.select();
     say('Kopieer deze code en plak ze op het andere toestel bij “Code inlezen”.');
@@ -83,7 +87,7 @@ export function initShop(o) {
     const code = $('.sync-in').value.trim();
     if (!code) return say('Plak eerst een code.', false);
     try {
-      const r = importCode(o.wallet(), code);
+      const r = importCode(o.wallet(), code, o.journey?.());
       $('.sync-in').value = '';
       say(`Gelukt! ${r.added} ${r.added === 1 ? 'nieuw spulletje' : 'nieuwe spulletjes'}` + (r.gained ? ` en ${r.gained} munten erbij.` : '.'));
       tryOn = null;
@@ -118,9 +122,12 @@ export function initShop(o) {
     changed();
   }
 
+  // Van jou: gekocht, of een sterrenbeloning waar je genoeg sterren voor hebt.
+  const isOwned = (it) => !it.id || o.wallet().owned.includes(it.id) || (it.stars && (o.stars?.() ?? 0) >= it.stars);
+
   function buy(it) {
     const w = o.wallet();
-    if (w.coins < it.price) return;
+    if (it.stars || w.coins < it.price) return;
     if (confirm !== it.id) { // eerst bevestigen: een misklik kost anders je munten
       confirm = it.id;
       clearTimeout(confirmTimer);
@@ -146,7 +153,7 @@ export function initShop(o) {
     grid.innerHTML = '';
     const none = { id: null, slot, name: slot === 'fur' ? 'Crème' : 'Niets', price: 0 };
     for (const it of [none, ...ITEMS.filter((i) => i.slot === slot)]) {
-      const owned = !it.id || w.owned.includes(it.id);
+      const owned = isOwned(it);
       const worn = (w.outfit[slot] ?? null) === it.id;
       const card = document.createElement('div');
       card.className = 'shop-card' + (worn ? ' worn' : '') + (owned ? ' owned' : '') + (tryOn?.id === it.id && tryOn?.slot === slot ? ' trying' : '');
@@ -159,6 +166,7 @@ export function initShop(o) {
       const btn = document.createElement('button');
       if (worn) { btn.textContent = '✓ Aan'; btn.className = 'on'; btn.disabled = !it.id; }
       else if (owned) btn.textContent = it.id ? 'Aandoen' : 'Uitdoen';
+      else if (it.stars) { btn.textContent = `⭐ ${it.stars}`; btn.className = 'buy star'; btn.disabled = true; btn.title = `Krijg je met ${it.stars} sterren`; }
       else if (confirm === it.id) { btn.innerHTML = `Zeker? <img src="img/lama/coin.png" alt="">${it.price}`; btn.className = 'buy sure'; }
       else { btn.innerHTML = `<img src="img/lama/coin.png" alt="">${it.price}`; btn.className = 'buy'; btn.disabled = coins < it.price; }
       btn.onclick = (e) => {
@@ -246,7 +254,7 @@ export function initShop(o) {
     randomize() {
       const w = o.wallet();
       for (const s of SLOTS) {
-        const mine = ITEMS.filter((i) => i.slot === s.id && w.owned.includes(i.id));
+        const mine = ITEMS.filter((i) => i.slot === s.id && isOwned(i));
         const pick = mine[Math.floor(Math.random() * (mine.length + 1))]; // ook kans op niets
         if (pick) w.outfit[s.id] = pick.id; else delete w.outfit[s.id];
       }

@@ -74,7 +74,45 @@ export class World {
     this.img = {}; // id -> {scenery, ground}
     this.monster = {}; // id van een monster -> beeld
     this.off = null;
+    // De route: welk landschap vanaf welke afgelegde weg. Op de reis blijf je in je landschap tot je de
+    // poortwachter verslaat (goTo); bij vrij oefenen wisselen de landschappen elke BIOME_LEN (wander).
+    this.route = [{ start: -Infinity, biome: 0 }];
+    this.cycle = null; // bij wander: de landschappen (nummers in BIOMES) die rondgaan
   }
+
+  // Blijf in landschap b (bv. het landschap van je huidige stap op de reis).
+  stay(b) { this.route = [{ start: -Infinity, biome: b }]; this.cycle = null; }
+
+  // Wissel om de BIOME_LEN tussen deze landschappen (vrij oefenen), te beginnen bij het eerste.
+  wander(list, dist) {
+    this.cycle = list.length ? list : [0];
+    this.route = [{ start: -Infinity, biome: this.cycle[0] }];
+    this.nextStart = (Math.floor(dist / BIOME_LEN) + 1) * BIOME_LEN + this.lay.W;
+  }
+
+  // Reis verder: vanaf afgelegde weg d begint landschap b (schuift van rechts binnen).
+  goTo(b, d) { this.route.push({ start: d, biome: b }); }
+
+  extend(d) {
+    if (!this.cycle) return;
+    while (this.route[this.route.length - 1].start < d + 3 * this.lay.W) {
+      const last = this.route[this.route.length - 1];
+      const i = this.cycle.indexOf(last.biome);
+      this.route.push({ start: this.nextStart, biome: this.cycle[(i + 1) % this.cycle.length] });
+      this.nextStart += BIOME_LEN;
+    }
+  }
+
+  // Het stuk van de route waar afgelegde weg d in ligt.
+  segAt(d) {
+    this.extend(d);
+    let i = this.route.length - 1;
+    while (i > 0 && this.route[i].start > d) i--;
+    return i;
+  }
+
+  // Het landschap (uit BIOMES) waar afgelegde weg d bij hoort.
+  biomeAt(d) { return this.loaded(this.route[this.segAt(d)].biome); }
 
   // Het eerste landschap meteen, de rest op de achtergrond (dan start het spel snel).
   async load() {
@@ -96,33 +134,26 @@ export class World {
 
   // Een willekeurig monster voor wie op afgelegde weg d op de bodem staat.
   monsterAt(d) {
-    const list = this.biome(this.indexAt(d)).monsters;
+    const list = this.biomeAt(d).monsters;
     return list[Math.floor(Math.random() * list.length)];
   }
 
-  // Landschap nummer k (blijft rondgaan); nog niet geladen: het vorige dat wel klaar is.
-  biome(k) {
-    const n = BIOMES.length;
-    for (let i = 0; i < n; i++) {
-      const b = BIOMES[(((k - i) % n) + n) % n];
-      if (this.img[b.id]) return b;
-    }
-    return BIOMES[0];
+  // Landschap nummer k uit BIOMES; nog niet geladen: het eerste dat wel klaar is.
+  loaded(k) {
+    const b = BIOMES[k];
+    return this.img[b.id] ? b : BIOMES.find((x) => this.img[x.id]) || BIOMES[0];
   }
 
-  // Het landschap waar een punt op afgelegde weg d op de bodem bij hoort.
-  indexAt(d) { return Math.floor(d / BIOME_LEN); }
-
   draw(g, dist) {
+    // oude stukken van de route vergeten
+    while (this.route.length > 2 && this.route[1].start < dist - 3 * this.lay.W) this.route.shift();
     // bodem: de grens met het volgende landschap ligt vast in de wereld en schuift mee met de bodem
-    const kg = this.indexAt(dist);
-    const ge = (kg + 1) * BIOME_LEN - dist;
-    this.layer(g, 'ground', kg, ge, FEATHER_GROUND, dist);
+    const ig = this.segAt(dist);
+    this.layer(g, 'ground', ig, (this.route[ig + 1]?.start ?? Infinity) - dist, FEATHER_GROUND, dist);
     // achtergrond: dezelfde grens, maar trager (de helft) en dus later voorbij
     const ds = dist - this.lay.W;
-    const ks = this.indexAt(ds);
-    const se = ((ks + 1) * BIOME_LEN - ds) / 2;
-    this.layer(g, 'scenery', ks, se, FEATHER_SKY, dist * 0.25);
+    const is = this.segAt(ds);
+    this.layer(g, 'scenery', is, ((this.route[is + 1]?.start ?? Infinity) - ds) / 2, FEATHER_SKY, dist * 0.25);
   }
 
   // Waar (y) en hoe hoog (h) een deel van een landschap op het scherm komt.
@@ -133,8 +164,8 @@ export class World {
       : { y: L.top + biome.split * k, h: (SRC_H - biome.split) * k + 1 };
   }
 
-  layer(g, part, k, edge, feather, offset) {
-    const ba = this.biome(k), bb = this.biome(k + 1);
+  layer(g, part, i, edge, feather, offset) {
+    const ba = this.loaded(this.route[i].biome), bb = this.route[i + 1] ? this.loaded(this.route[i + 1].biome) : ba;
     const a = this.img[ba.id][part], b = this.img[bb.id][part];
     const pa = this.place(ba, part), pb = this.place(bb, part);
     // eerst het huidige landschap, de grens zit nog achter de rechterrand

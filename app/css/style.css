@@ -298,6 +298,34 @@ input[type=range] { accent-color: var(--accent); }
 #lamaWrap:is(:fullscreen, .is-full) .lama-stage { width: min(100%, calc((100dvh - 110px) * 16 / 9)); }
 body.lama-full { overflow: hidden; }
 .hud-coins b { display: flex; align-items: center; gap: 4px; }
+.hud-gate b { color: #9a6bff !important; }
+
+/* Lama: reis of vrij oefenen, de kaart van de reis, sterren op de notenknoppen */
+.lama-mode { display: flex; gap: 4px; background: var(--bg); padding: 4px; border-radius: 12px; margin-bottom: 10px; }
+.lama-mode button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 800; color: var(--muted);
+  padding: 8px 6px; border-radius: 9px; cursor: pointer; }
+.lama-mode button.on { background: var(--paper); color: var(--accent-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.lama-map { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lama-map li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 6px; padding: 5px 8px;
+  border-radius: 10px; font-size: 14px; }
+.lama-map li.done { color: var(--muted); }
+.lama-map li.here { background: var(--accent-soft); color: var(--accent-ink); font-weight: 800; }
+.lama-map li.locked { color: #b5a99d; }
+.lama-map li.locked .nt b { filter: blur(3px); } /* welke noot je leert, zie je pas als je er bent */
+.lama-map .nm { font-weight: 800; }
+.lama-map .nt { font-size: 13px; }
+.lama-map .gate { grid-column: 1 / -1; font-size: 13px; font-weight: 700; }
+.lama-map .gate .gbar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.7); overflow: hidden; margin: 4px 0 2px; }
+.lama-map .gate .gbar i { display: block; height: 100%; background: var(--accent); border-radius: 4px; }
+.lama-map .gate small { color: var(--muted); }
+#lamaTestGate { margin-top: 8px; }
+.chip { position: relative; }
+.chip .stars { display: block; font-style: normal; font-size: 10px; color: #e8a200; letter-spacing: 1px; line-height: 1; margin-top: 1px; }
+.chip .new { position: absolute; top: -7px; right: -4px; font-style: normal; font-size: 9px; font-weight: 900; color: #fff;
+  background: #e8473f; border-radius: 6px; padding: 1px 4px; }
+.chip.auto { cursor: default; }
+.chip.locked { opacity: .45; }
+.chip.locked b::after { content: ' 🔒'; font-size: 11px; }
 .hud-coins img { width: 24px; height: 26px; }
 .hud-coins.bump b { animation: coinBump .6s; }
 @keyframes coinBump { 30% { transform: scale(1.35); color: #e8a200; } }
