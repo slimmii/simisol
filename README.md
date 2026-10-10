@@ -55,6 +55,9 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   sterrennacht, snoepland, strand, jungle, woestijn, vulkaanland). Het nieuwe landschap schuift zacht binnen,
   eerst de bodem, dan de verre bergen. De beelden staan in `art/llama-runner/backgrounds/` en worden met
   `tools/make_backgrounds.py` omgezet naar `app/img/lama/bg/`.
+  Elk landschap heeft zijn **eigen monsters** (bv. sneeuwman, uil en pinguïn in de sneeuw; krab, meeuw en
+  kokosnoot op het strand). De vellen staan in `art/llama-runner/enemies/`; `tools/make_enemies.py` knipt ze uit
+  naar `app/img/lama/monsters/`.
   Soms hangt er in plaats van een monster een **munt** in de lucht (gouden noot). Speel die noot en de lama
   springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. In de **🛍️ Winkel** koop je
   met munten spulletjes voor de lama: een vachtkleur, iets op het hoofd (de bloem, hoedjes, kroon…), een bril, iets rond

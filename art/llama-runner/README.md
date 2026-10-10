@@ -9,7 +9,8 @@ Gegenereerd met OpenArt (project `OMF8m7Pkdq19IDX0vQe3`). De speelklare versies 
 | `llama_jump.mp4` | Seedance 2.5 (image2video, 720p, 4 s) | start- én eindframe = basisbeeld |
 | `background_full.png` | Nano Banana 2.1 | naadloos herhaalbaar; de weide (`backgrounds/weide.png` is dezelfde, op 1584x672) |
 | `backgrounds/<id>.png` | Nano Banana 2.1 (image2image op de weide) | sneeuw, lava, woestijn, strand, herfst, nacht, snoep, jungle: zelfde opbouw en bodemhoogte; `tools/make_backgrounds.py` maakt er `app/img/lama/bg/<id>_scenery.webp` + `<id>_ground.webp` van |
-| `enemies_sheet.png` | Nano Banana 2.1 | cactus, vleermuis, gordeldier |
+| `enemies_sheet.png` | Nano Banana 2.1 | cactus, vleermuis, gordeldier (de monsters van de weide) |
+| `enemies/<landschap>.png` | Nano Banana 2.1 (image2image op `enemies_sheet.png`) | drie monsters per landschap; `tools/make_enemies.py` knipt ze uit naar `app/img/lama/monsters/<id>.png` |
 | `items_sheet.png` | Nano Banana 2.1 | munt, hartje, bloem |
 
 Sprite sheets (`llama_walk.png`, `llama_jump.png`, `llama.json`):

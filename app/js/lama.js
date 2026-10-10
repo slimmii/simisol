@@ -7,11 +7,10 @@
 // en vangt de munt (voor de winkel). Mis je ze, dan vliegt ze weg; botsen doe je niet.
 import { parseNote, soundingMidi, solfege, solfegeOf, describePosition } from './notes.js';
 import { loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
-import { World } from './lama-world.js';
+import { World, MONSTERS } from './lama-world.js';
 
 const VF = window.Vex.Flow;
 const SVGNS = 'http://www.w3.org/2000/svg';
-const ASSETS = 'img/lama/';
 
 // Spelwereld in canvas-eenheden (het canvas wordt geschaald naar de breedte van de pagina).
 const W = 960, H = 540;
@@ -37,12 +36,6 @@ const B4 = 4 * 7 + 6; // middelste lijn
 
 const COIN_Y = GROUND_Y - 165; // hoogte van de munten: daar zit de lama bovenaan haar sprong
 const COIN_CHANCE = 1 / 3; // kans op een munt na minstens één monster: gemiddeld 1 op 4 noten (nooit twee na elkaar)
-
-const MONSTERS = {
-  cactus: { h: 74, lift: 0 },
-  armadillo: { h: 56, lift: 0, flip: true },
-  bat: { h: 50, lift: 34 },
-};
 
 export class LamaGame {
   /**
@@ -78,13 +71,7 @@ export class LamaGame {
   }
 
   async load() {
-    const names = ['cactus', 'bat', 'armadillo'];
-    const [A] = await Promise.all([loadLlama(), this.world.load(), ...names.map((n) => new Promise((res, rej) => {
-      const i = new Image();
-      i.onload = () => { this.img[n] = i; res(); };
-      i.onerror = () => rej(new Error(`kan ${n} niet laden`));
-      i.src = ASSETS + n + '.png';
-    }))]);
+    const [A] = await Promise.all([loadLlama(), this.world.load()]);
     this.A = A;
     Object.assign(this.img, A.img);
     this.meta = A.meta;
@@ -129,7 +116,6 @@ export class LamaGame {
   fill() {
     const visible = W / PX_PER_BEAT + 2;
     let last = this.notes.length ? this.notes[this.notes.length - 1].beat : LEAD_BEATS - 1;
-    const kinds = Object.keys(MONSTERS);
     while (last < this.beat + visible) {
       last += 1;
       this.lastFinger = this.lastFinger === 'm' ? 'i' : 'm';
@@ -137,7 +123,8 @@ export class LamaGame {
       this.sinceCoin = coin ? 0 : this.sinceCoin + 1;
       this.notes.push({
         p: this.nextPitch(), beat: last, state: null, el: null, finger: this.lastFinger,
-        kind: coin ? 'coin' : kinds[Math.floor(Math.random() * kinds.length)], t: Math.random() * 6,
+        // het monster hoort bij het landschap waar het staat
+        kind: coin ? 'coin' : this.world.monsterAt(this.dist + PLAYER_X + (last - this.beat) * PX_PER_BEAT), t: Math.random() * 6,
       });
     }
   }
@@ -580,15 +567,24 @@ export class LamaGame {
   }
 
   drawMonster(n, x) {
-    const g = this.g, def = MONSTERS[n.kind], im = this.img[n.kind];
-    const h = def.h, w = (im.width * h) / im.height;
+    const g = this.g, def = MONSTERS[n.kind], im = this.world.monster[n.kind];
+    const h = def.h, w = (im.width * h) / im.height, t = n.t;
     const cy = GROUND_Y - def.lift - h / 2;
     g.save();
     g.translate(x, cy);
+    switch (def.anim) {
+      case 'sway': g.translate(0, h / 2); g.rotate(Math.sin(t * 8) * 0.06); g.translate(0, -h / 2); break; // wiebelen op de voet
+      case 'hop': g.translate(0, -Math.abs(Math.sin(t * 12)) * 3); break;
+      case 'fly': g.translate(0, Math.sin(t * 3) * 6); g.scale(1, 0.9 + Math.abs(Math.sin(t * 14)) * 0.1); break;
+      case 'float': g.translate(0, Math.sin(t * 2) * 8); break;
+      case 'slide': g.translate(0, Math.sin(t * 6) * 1.5); g.rotate(Math.sin(t * 3) * 0.04); break;
+      case 'wobble': g.translate(0, h / 2); g.scale(1 + Math.sin(t * 7) * 0.05, 1 - Math.sin(t * 7) * 0.05); g.translate(0, -h / 2); break;
+      case 'scuttle': g.translate(Math.sin(t * 18) * 2, -Math.abs(Math.sin(t * 18)) * 1.5); break;
+      case 'roll': g.rotate(-t * 4); break; // rolt naar de lama toe
+      case 'stomp': g.translate(0, -Math.max(0, Math.sin(t * 5)) * 4); break;
+    }
     if (def.flip) g.scale(-1, 1);
-    if (n.kind === 'cactus') g.rotate(Math.sin(n.t * 8) * 0.06);
-    if (n.kind === 'armadillo') g.translate(0, -Math.abs(Math.sin(n.t * 12)) * 3);
-    if (n.kind === 'bat') { g.translate(0, Math.sin(n.t * 3) * 6); g.scale(1, 0.9 + Math.abs(Math.sin(n.t * 14)) * 0.1); }
+    if (def.glow) { g.shadowColor = 'rgba(190, 215, 255, .9)'; g.shadowBlur = 14; }
     if (n.state === 'wrong') g.rotate(Math.sin(n.t * 30) * 0.08); // boos
     if (n.state === 'hit') g.globalAlpha = 0.85;
     g.drawImage(im, -w / 2, -h / 2, w, h);
