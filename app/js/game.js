@@ -9,6 +9,8 @@ const SCALE = 1.7; // vergroting van de notenbalk
 const PX_PER_BEAT = 64; // afstand tussen twee noten (onvergroot)
 const LEAD_BEATS = 4; // zoveel tellen schuift de eerste noot voor ze aankomt
 const EARLY_BEATS = 1; // een noot telt pas als ze minder dan 1 tel van de speellijn is
+const ON_TIME = 0.15; // s na het bereiken van de lijn: nog 'op tijd'
+const LATE_SHOW = 0.35; // s wachten op de lijn voor ze oranje 'te laat' wordt (de herkenning heeft even tijd nodig)
 const LETTER_STEP = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
 const diatonic = (p) => { const n = parseNote(p); return n.octave * 7 + LETTER_STEP[n.letter]; };
 const E4 = 4 * 7 + 2; // onderste lijn
@@ -44,6 +46,7 @@ export class Game {
     this.streak = 0;
     this.total = 0;
     this.lastBeatClick = Math.floor(-LEAD_BEATS);
+    this.hist = []; // (tijd, positie) om te weten waar de noten stonden op het moment van een tokkel
     this.lastFinger = 'i';
     this.prev = [];
     this.lastHit = null;
@@ -205,10 +208,12 @@ export class Game {
     this.lastT = now;
     const tgt = this.target();
     let next = this.beat + (dt * this.bpm) / 60;
-    // te laat: de noot wacht op de speellijn tot je ze speelt
+    // de noot wacht op de speellijn tot je ze speelt
     if (tgt && next >= tgt.beat) {
+      // exact moment waarop ze de lijn bereikte (tussen twee beeldjes in)
+      if (tgt.arrivedAt == null) tgt.arrivedAt = now - ((next - tgt.beat) * 60) / this.bpm;
       next = tgt.beat;
-      if (tgt.state !== 'late') { tgt.state = 'late'; tgt.lateText = 'te laat'; }
+      if (tgt.state !== 'late' && now - tgt.arrivedAt > LATE_SHOW) { tgt.state = 'late'; tgt.lateText = 'te laat'; }
     }
     // metronoom: tik telkens een noot de speellijn bereikt
     const whole = Math.floor(next + 1e-6);
@@ -217,8 +222,21 @@ export class Game {
       if (this.metro) this.o.click(now, whole % 4 === 0);
     }
     this.beat = next;
+    this.hist.push({ t: now, beat: next });
+    while (this.hist.length > 2 && now - this.hist[0].t > 4) this.hist.shift();
     this.fill();
     this.paint();
+  }
+
+  // Positie van de noten op tijdstip t (bv. het moment van een tokkel, al gecorrigeerd voor de microfoonvertraging).
+  beatAt(t) {
+    const h = this.hist;
+    if (!h.length || t >= h[h.length - 1].t) return this.beat;
+    if (t <= h[0].t) return h[0].beat;
+    let i = h.length - 1;
+    while (i > 0 && h[i - 1].t > t) i--;
+    const a = h[i - 1], b = h[i];
+    return a.beat + ((b.beat - a.beat) * (t - a.t)) / (b.t - a.t || 1);
   }
 
   sendExpect() {
@@ -233,19 +251,24 @@ export class Game {
     if (!tgt) return;
     const exp = soundingMidi(tgt.p);
     const now = this.o.ctx().currentTime;
+    // Waar stond de noot op het moment van de tokkel? (niet: op het moment dat de herkenning klaar was)
+    const at = Math.min(ev.time ?? now, now);
+    const beatThen = this.beatAt(at);
     // Nog te ver van de speellijn: niet meetellen en niet bestraffen, enkel laten zien.
-    if (tgt.beat - this.beat > EARLY_BEATS) {
+    if (tgt.beat - beatThen > EARLY_BEATS) {
       if (ev.attack !== false) { tgt.earlyUntil = now + 0.6; }
       return;
     }
     if (ev.midi === exp) {
+      // te laat alleen als de tokkel duidelijk na het aankomen op de lijn kwam
+      const late = tgt.arrivedAt != null && at > tgt.arrivedAt + ON_TIME;
+      tgt.lateText = late ? 'te laat' : '';
       tgt.state = 'hit';
       this.lastHit = { midi: ev.midi, time: ev.time };
       this.streak++;
       this.total++;
       if (this.streak > this.best) { this.best = this.streak; this.onBest?.(this.best); }
       this.updateHud();
-      if (tgt.lateText) tgt.lateText = 'te laat';
       this.say(this.streak > 0 && this.streak % 10 === 0 ? `${this.streak} op rij! 🔥` : '');
       this.sendExpect();
       return;

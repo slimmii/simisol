@@ -40,6 +40,18 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   niet bestraft. Je **record** wordt per combinatie van noten onthouden. De schuifregelaar zet de
   snelheid in noten per minuut.
 
+- **Lama 🦙**: de lama uit `app/img/lama/` loopt vanzelf door een pixel-landschap. Bovenaan in de lucht
+  hangt een notenbalk; elke noot staat recht boven een monster. De **blauwe balk** vlak vóór de lama is
+  het speelvenster: speel je de noot juist terwijl ze in de balk staat, dan **springt** de lama meteen
+  over het monster: **+1 punt**. Een **foute noot**, of de noot is de balk uit: de lama **botst** tegen
+  het monster en verliest een leven. Na 3 levens is het spel uit. Hoe breed de balk is, hangt af van
+  *Hoe streng op de maat?*; de metronoom tikt als een noot in het midden van de balk staat.
+  De naam van de noot die aan de beurt is, staat ook **groot** in de lucht (met de snaar); dat zet je
+  af met de schakelaar *Grote notennaam*. Met
+  **⛶ Volledig scherm** (of de toets F) speel je op het hele scherm. Je **record** wordt per combinatie
+  van noten onthouden; de schuifregelaar zet de snelheid in noten per minuut.
+  (`app/runner/` is een losse demo die je met de toetsen speelt.)
+
 Overal kan je de metronoom aan/uit zetten en het tempo met de schuifregelaar kiezen
 (bij een opname verandert dat de afspeelsnelheid, zonder dat de toonhoogte verandert).
 Met **Wachten op mij** wacht de app tot je de juiste noot speelt, zonder maat.

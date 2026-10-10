@@ -1,0 +1,23 @@
+{
+  "standH": 160,
+  "walk": {
+    "cellW": 115,
+    "cellH": 162,
+    "frames": 30,
+    "fps": 24,
+    "anchorX": 57
+  },
+  "jump": {
+    "cellW": 121,
+    "cellH": 164,
+    "frames": 31,
+    "takeoff": 0,
+    "apex": 10,
+    "land": 21,
+    "anchorX": 59
+  },
+  "source": {
+    "walk": "frames 24-53 of llama_walk.mp4 (24 fps)",
+    "jump": "frames 26-86 step 2 of llama_jump.mp4"
+  }
+}

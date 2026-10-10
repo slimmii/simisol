@@ -6,6 +6,7 @@ import { renderScore } from './score.js';
 import { loadSongs, importZip, clearLibrary } from './library.js';
 import { renderGuitar } from './guitar.js';
 import { Game } from './game.js';
+import { LamaGame } from './lama.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -32,6 +33,10 @@ const settings = Object.assign(
     echo: false,
     gameBpm: 40,
     gameBest: {}, // record per combinatie van noten
+    lamaBpm: 30,
+    lamaBest: {}, // record van het lama-spel, per combinatie van noten
+    lamaBigName: true, // naam van de noot groot tonen in het lama-spel
+    lamaLives: 3, // 0 = onsterfelijk
   },
   safeRead(SETTINGS_KEY),
 );
@@ -259,10 +264,12 @@ function usingRecording() { return !!songAudio(); }
 
 function updateTempoUI() {
   const t = $('tempo');
-  if (settings.tab === 'game') {
-    t.min = 15; t.max = 120; t.step = 1;
-    t.value = settings.gameBpm;
-    $('tempoOut').textContent = `${settings.gameBpm} noten/min`;
+  if (settings.tab === 'game' || settings.tab === 'lama') {
+    const v = settings.tab === 'game' ? settings.gameBpm : settings.lamaBpm;
+    $('lSpeed').textContent = settings.lamaBpm;
+    t.min = 15; t.max = settings.tab === 'game' ? 120 : 90; t.step = 1;
+    t.value = v;
+    $('tempoOut').textContent = `${v} noten/min`;
     $('waitWrap').classList.add('disabled');
     t.previousElementSibling.firstChild.textContent = 'Snelheid ';
     return;
@@ -283,10 +290,12 @@ function updateTempoUI() {
 }
 
 // ---------- weergave van de status ----------
-const counts = { good: 0, bad: 0, early: 0, missed: 0 };
+const counts = { good: 0, bad: 0, early: 0, late: 0, missed: 0 };
 let states = [];
 let judgedAt = [];
+let lastWrong = null; // laatste foute noot, om dubbele meldingen ervan te negeren
 function resetCounts() {
+  lastWrong = null;
   states = piece ? piece.notes.map(() => null) : [];
   judgedAt = [];
   Object.keys(counts).forEach((k) => (counts[k] = 0));
@@ -300,6 +309,7 @@ function updateCounts() {
   $('cBad').textContent = counts.bad;
   $('cEarly').textContent = counts.early;
   $('cMissed').textContent = counts.missed;
+  $('cLate').textContent = counts.late;
 }
 
 let curIdx = -1;
@@ -311,24 +321,29 @@ function repaintStates() {
     pos.el.classList.toggle('is-good', st === 'good');
     pos.el.classList.toggle('is-bad', st === 'bad' || st === 'early');
     pos.el.classList.toggle('is-missed', st === 'missed');
+    pos.el.classList.toggle('is-late', st === 'late');
     pos.el.classList.toggle('is-cur', i === curIdx && !st);
   });
 }
 
 function setState(i, st, label) {
   if (states[i] === st) return;
+  // een noot kan van 'gemist' nog naar 'te laat' of 'fout' gaan: oude telling en label weghalen
+  if (states[i]) counts[states[i]]--;
+  document.querySelector(`#badges .badge[data-i="${i}"]`)?.remove();
   states[i] = st;
-  counts[st === 'early' ? 'early' : st]++;
+  counts[st]++;
   updateCounts();
   repaintStates();
-  if (label) addBadge(i, label);
+  if (label) addBadge(i, label, st);
 }
 
-function addBadge(i, text) {
+function addBadge(i, text, st) {
   const pos = layout?.positions[i];
   if (!pos) return;
   const el = document.createElement('div');
-  el.className = 'badge';
+  el.className = 'badge' + (st === 'late' ? ' late' : '');
+  el.dataset.i = i;
   el.textContent = text;
   const score = $('score');
   el.style.left = pos.x + score.offsetLeft + 'px';
@@ -393,7 +408,7 @@ function onFrame(f) {
     const nm = nameByWritten.get(written);
     $('heardWhere').textContent = nm ? describePosition(nm) : '';
     $('needle').style.left = 50 + Math.max(-50, Math.min(50, f.cents)) + '%';
-    const gt = game.running ? game.target() : null;
+    const gt = game.running ? game.target() : lama.running ? lama.target() : null;
     const exp = gt ? soundingMidi(gt.p)
       : curIdx >= 0 && piece.notes[curIdx] && !isRest(piece.notes[curIdx]) ? soundingMidi(piece.notes[curIdx].p) : null;
     $('heardName').classList.toggle('match', exp === f.midi);
@@ -407,6 +422,7 @@ function onFrame(f) {
 function onNote(ev) {
   if (calib) return calibNote(ev);
   if (game.running) return game.onNote(ev);
+  if (lama.running) return lama.onNote(ev);
   if (!run || !piece || run.demo) return;
   if (run.wait) return judgeWait(ev);
   judgeTimed(ev);
@@ -441,22 +457,41 @@ function judgeTimed(ev) {
     if (isRest(notes[i]) || states[i]) continue;
     if (b >= starts[i] - tol && b <= starts[i] + lateWindow(i)) {
       if (soundingMidi(notes[i].p) === ev.midi) setState(i, 'good');
-      else setState(i, 'bad', `fout: ${playedName}`);
+      else { setState(i, 'bad', `fout: ${playedName}`); lastWrong = { midi: ev.midi, time: ev.time }; }
       judgedAt[i] = ev.time;
       return;
     }
     if (starts[i] - tol > b) break;
   }
-  // Niets in het venster: was dit te vroeg?
+  // Niets in het venster.
   const sounding = notes.findIndex((n, i) => b >= starts[i] && b < starts[i] + n.d);
   // dubbele detectie van dezelfde aanslag negeren
   if (sounding >= 0 && judgedAt[sounding] != null && ev.time - judgedAt[sounding] < 0.25) return;
-  // Alleen een duidelijke nieuwe aanslag kan 'te vroeg' of 'fout' zijn, geen uitklinkende snaar.
+  // Alleen een duidelijke nieuwe aanslag kan 'te laat', 'te vroeg' of 'fout' zijn, geen uitklinkende snaar.
   if (ev.attack === false) return;
+  // Dezelfde foute noot die net al als fout werd aangeduid (bv. nog naklinkend of nog eens gedetecteerd)
+  if (lastWrong && lastWrong.midi === ev.midi && ev.time - lastWrong.time < 1.0) return;
+
+  // Eerst: hoort deze aanslag bij de noot die nu aan de beurt is (of net voorbij is)?
+  // Is die nog niet gespeeld, dan is dit een late of foute poging voor díe noot — niet 'te vroeg'
+  // voor de volgende, ook al is het toevallig de toon van de volgende noot.
+  let cur = -1;
+  for (let i = 0; i < notes.length; i++) {
+    if (starts[i] - tol > b) break;
+    if (!isRest(notes[i])) cur = i;
+  }
+  if (cur >= 0 && b <= starts[cur] + Math.max(notes[cur].d, 1) && (!states[cur] || states[cur] === 'missed')) {
+    if (soundingMidi(notes[cur].p) === ev.midi) setState(cur, 'late', 'te laat');
+    else { setState(cur, 'bad', `fout: ${playedName}`); lastWrong = { midi: ev.midi, time: ev.time }; }
+    judgedAt[cur] = ev.time;
+    return;
+  }
+
+  // De huidige noot is al gespeeld: dan kan dit de volgende noot zijn, te vroeg.
   const next = notes.findIndex((n, i) => !isRest(n) && !states[i] && starts[i] - tol > b);
   if (next >= 0 && starts[next] - b <= Math.max(1, notes[sounding]?.d ?? 1)) {
     if (soundingMidi(notes[next].p) === ev.midi) setState(next, 'early', 'te vroeg');
-    else setState(next, 'bad', `fout: ${playedName}`);
+    else { setState(next, 'bad', `fout: ${playedName}`); lastWrong = { midi: ev.midi, time: ev.time }; }
   }
 }
 
@@ -507,6 +542,92 @@ function configureGame() {
   game.best = settings.gameBest[selectionKey()] || 0;
   game.setPool(PRACTICE_NOTES.filter((n) => settings.selection.includes(n)));
   game.updateHud();
+}
+
+// ---------- lama-spel ----------
+const lama = new LamaGame({
+  container: $('lamaStage'),
+  hud: { score: $('lScore'), best: $('lBest'), lives: $('lLives'), livesLabel: $('lLivesLbl'), msg: $('lMsg') },
+  ctx: audioCtx,
+  click,
+  setExpect: (midis) => detector?.setExpect(midis),
+  onTarget: (p) => {
+    $('expectName').textContent = p ? solfegeOf(p) : '–';
+    $('expectWhere').textContent = p ? describePosition(p) : '';
+  },
+  onOver: () => {
+    $('startBtn').textContent = '▶ Start';
+    $('startBtn').classList.remove('stop');
+  },
+});
+// Record per combinatie van noten én aantal levens (3 levens houdt de oude sleutel). Onsterfelijk: geen record.
+const lamaBestKey = () => selectionKey() + (settings.lamaLives === 3 ? '' : `|${settings.lamaLives}`);
+lama.onBest = (best) => { settings.lamaBest[lamaBestKey()] = best; save(); };
+
+// Snelheid: zelfde waarde als de schuifregelaar, ook te veranderen in de spelbalk (en met ← →).
+function setLamaSpeed(v) {
+  settings.lamaBpm = Math.max(15, Math.min(90, Math.round(v)));
+  lama.bpm = settings.lamaBpm; // mag tijdens het spelen veranderen
+  save();
+  updateTempoUI();
+}
+
+// Breedte van de blauwe balk (in tellen) volgens 'Hoe streng op de maat?'.
+const lamaBarBeats = () => Math.round(settings.tol * 2.5 * 100) / 100;
+
+function configureLama() {
+  lama.bpm = settings.lamaBpm;
+  lama.setBarBeats(lamaBarBeats());
+  lama.metro = settings.metro;
+  lama.showNames = settings.names;
+  lama.showFingers = settings.fingers;
+  lama.bigName = settings.lamaBigName;
+  lama.maxLives = settings.lamaLives;
+  lama.best = lama.immortal() ? 0 : settings.lamaBest[lamaBestKey()] || 0;
+  $('lBest').parentElement.classList.toggle('hidden', lama.immortal());
+  lama.setPool(PRACTICE_NOTES.filter((n) => settings.selection.includes(n)));
+  lama.updateHud();
+}
+
+// Volledig scherm: de HUD + het spel. Kan de browser dat niet (bv. iPhone), dan vult het spel het venster.
+const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+function setPseudoFull(on) {
+  $('lamaWrap').classList.toggle('is-full', on);
+  document.body.classList.toggle('lama-full', on);
+  onFullscreenChange();
+}
+function toggleLamaFullscreen() {
+  const el = $('lamaWrap');
+  if (el.classList.contains('is-full')) return setPseudoFull(false);
+  if (isFullscreen()) return (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req) return setPseudoFull(true);
+  try {
+    req.call(el)?.catch?.(() => setPseudoFull(true));
+  } catch {
+    setPseudoFull(true);
+  }
+}
+function onFullscreenChange() {
+  const full = isFullscreen() || $('lamaWrap').classList.contains('is-full');
+  $('lFull').textContent = full ? '✕ Sluiten' : '⛶ Volledig scherm';
+  if (settings.tab === 'lama') requestAnimationFrame(() => lama.draw());
+}
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+// De Start-knop in volledig scherm volgt de grote Start-knop.
+new MutationObserver(() => {
+  $('lStart').textContent = $('startBtn').textContent;
+  $('lStart').classList.toggle('stop', $('startBtn').classList.contains('stop'));
+}).observe($('startBtn'), { childList: true, characterData: true, subtree: true, attributes: true });
+
+async function startLama() {
+  stop();
+  await ensureMic();
+  configureLama();
+  lama.start();
+  $('startBtn').textContent = '■ Stop';
+  $('startBtn').classList.add('stop');
 }
 
 async function startGame() {
@@ -740,8 +861,9 @@ async function playDemo() {
 
 function stop() {
   if (calib) cancelCalibration('Gestopt.');
-  if (game.running) {
+  if (game.running || lama.running) {
     game.stop();
+    lama.stop();
     $('startBtn').textContent = '▶ Start';
     $('startBtn').classList.remove('stop');
   }
@@ -900,6 +1022,7 @@ function buildNoteChips() {
       save();
       b.classList.toggle('on');
       if (settings.tab === 'game') { if (!game.running) configureGame(); }
+      else if (settings.tab === 'lama') { if (!lama.running) configureLama(); }
       else makeExercise();
     };
     wrap.appendChild(b);
@@ -988,6 +1111,10 @@ function bindUI() {
     if (settings.tab === 'game') {
       settings.gameBpm = +e.target.value;
       game.bpm = settings.gameBpm; // mag tijdens het spelen veranderen
+    } else if (settings.tab === 'lama') {
+      settings.lamaBpm = +e.target.value;
+      lama.bpm = settings.lamaBpm;
+      $('lSpeed').textContent = settings.lamaBpm;
     } else if (usingRecording()) {
       settings.speed = +e.target.value;
       if (run?.audio) {
@@ -1006,14 +1133,24 @@ function bindUI() {
     $(id).checked = settings[key];
     $(id).onchange = (e) => { settings[key] = e.target.checked; save(); after?.(); };
   };
-  toggle('metroToggle', 'metro', () => { game.metro = settings.metro; });
+  toggle('metroToggle', 'metro', () => { game.metro = settings.metro; lama.metro = settings.metro; });
   toggle('waitToggle', 'wait', () => stop());
   toggle('namesToggle', 'names', redraw);
+  toggle('bigNameToggle', 'lamaBigName', () => { lama.bigName = settings.lamaBigName; });
+  $('lamaLives').value = String(settings.lamaLives);
+  $('lamaLives').onchange = (e) => {
+    settings.lamaLives = +e.target.value;
+    save();
+    if (lama.running) stop(); // een ander aantal levens: opnieuw beginnen
+    configureLama();
+  };
+  $('lSlower').onclick = (e) => { e.currentTarget.blur(); setLamaSpeed(settings.lamaBpm - 5); };
+  $('lFaster').onclick = (e) => { e.currentTarget.blur(); setLamaSpeed(settings.lamaBpm + 5); };
   toggle('echoToggle', 'echo', () => { stop(); detector?.stop(); detector = null; });
   toggle('fingersToggle', 'fingers', redraw);
 
   $('difficulty').value = String(settings.tol);
-  $('difficulty').onchange = (e) => { settings.tol = +e.target.value; save(); };
+  $('difficulty').onchange = (e) => { settings.tol = +e.target.value; save(); lama.setBarBeats(lamaBarBeats()); };
   // gevoeligheid: -0.6 (heel ongevoelig, enkel luide tokkels) .. 1 (heel gevoelig)
   const sensLabel = (v) => (v < -0.2 ? 'heel laag' : v < 0.25 ? 'laag' : v < 0.65 ? 'normaal' : 'hoog');
   $('sens').value = settings.sens;
@@ -1036,13 +1173,25 @@ function bindUI() {
 
   $('startBtn').onclick = () => {
     if (settings.tab === 'game') return game.running ? stop() : startGame();
+    if (settings.tab === 'lama') return lama.running ? stop() : startLama();
     return run && !run.demo ? stop() : start();
   };
   $('demoBtn').onclick = () => (run?.demo ? stop() : playDemo());
+  $('lStart').onclick = (e) => { e.currentTarget.blur(); $('startBtn').click(); };
+  $('lFull').onclick = (e) => { e.currentTarget.blur(); toggleLamaFullscreen(); };
   document.addEventListener('keydown', (e) => {
     if (e.code === 'Space' && !['INPUT', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) {
       e.preventDefault();
       $('startBtn').click();
+    }
+    if (e.code === 'Escape' && $('lamaWrap').classList.contains('is-full')) setPseudoFull(false);
+    if ((e.code === 'ArrowLeft' || e.code === 'ArrowRight') && settings.tab === 'lama'
+        && !['INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
+      e.preventDefault();
+      setLamaSpeed(settings.lamaBpm + (e.code === 'ArrowRight' ? 5 : -5));
+    }
+    if (e.code === 'KeyF' && settings.tab === 'lama' && !['INPUT', 'SELECT'].includes(document.activeElement?.tagName)) {
+      toggleLamaFullscreen();
     }
   });
 
@@ -1055,6 +1204,10 @@ function redraw() {
     game.showNames = settings.names;
     game.showFingers = settings.fingers;
     game.draw();
+  } else if (settings.tab === 'lama') {
+    lama.showNames = settings.names;
+    lama.showFingers = settings.fingers;
+    lama.draw();
   } else draw();
 }
 
@@ -1063,16 +1216,26 @@ function switchTab(tab) {
   settings.tab = tab;
   save();
   const isGame = tab === 'game';
+  const isLama = tab === 'lama';
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === tab));
   $('pane-practice').classList.toggle('hidden', tab !== 'practice');
   $('pane-songs').classList.toggle('hidden', tab !== 'songs');
   $('pane-game').classList.toggle('hidden', !isGame);
+  $('pane-lama').classList.toggle('hidden', !isLama);
   $('noteField').classList.toggle('hidden', tab === 'songs');
   $('gameWrap').classList.toggle('hidden', !isGame);
-  for (const id of ['scoreWrap', 'resultsBar', 'legendBar', 'demoBtn']) $(id).classList.toggle('hidden', isGame);
+  $('lamaWrap').classList.toggle('hidden', !isLama);
+  for (const id of ['scoreWrap', 'resultsBar', 'legendBar', 'demoBtn']) $(id).classList.toggle('hidden', isGame || isLama);
+  if (!isLama) { lama.hide(); if ($('lamaWrap').classList.contains('is-full')) setPseudoFull(false); }
   if (tab === 'practice') makeExercise();
   else if (tab === 'songs') loadSong(settings.song);
-  else {
+  else if (isLama) {
+    configureLama();
+    lama.draw();
+    lama.show();
+    $('expectName').textContent = '–';
+    $('expectWhere').textContent = '';
+  } else {
     configureGame();
     game.draw();
     $('expectName').textContent = '–';
@@ -1082,7 +1245,7 @@ function switchTab(tab) {
 }
 
 // Testhaakje: laat toe noten te simuleren vanuit de console.
-window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, get calib() { return calib; }, states: () => states };
+window.__simisol = { onNote: (ev) => onNote(ev), get run() { return run; }, get ctx() { return ctx; }, get detector() { return detector; }, frame: () => frame(), game, lama, get calib() { return calib; }, get piece() { return piece; }, get starts() { return starts; }, states: () => states };
 
 SONGS = await loadSongs();
 buildNoteChips();

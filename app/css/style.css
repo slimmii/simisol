@@ -256,6 +256,50 @@ input[type=range] { accent-color: var(--accent); }
 .gnote.is-hit .ghead { fill: var(--good); }
 .gnote.is-hit .gstem, .gnote.is-hit .gledger { stroke: var(--good); }
 
+/* ---------- Lama-spel ---------- */
+.lama-stage { position: relative; border-radius: 10px; overflow: hidden; background: #a9d4f5; }
+.lama-stage canvas { display: block; width: 100%; height: auto; }
+.lama-stage svg.lama-sky { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.lama-panel { fill: rgba(255, 255, 255, .86); stroke: rgba(255, 255, 255, .95); stroke-width: 1.5; }
+.hud-lives { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.hud-lives span#lLives { display: flex; gap: 4px; margin-top: 4px; }
+.hud-lives img { width: 30px; height: 32px; transition: opacity .2s, filter .2s; }
+.hud-lives img.lost { opacity: .25; filter: grayscale(1); }
+.hud-lives #lLives.many img { width: 20px; height: 21px; }
+.hud-lives .inf { font-size: 30px; font-weight: 900; color: var(--accent); line-height: 32px; }
+.hud-lives .bumps { font-size: 22px; font-weight: 900; color: var(--muted); margin-left: 6px; line-height: 32px; }
+.hud-speed { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.hud-speed small { font-size: 11px; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.speed-ctl { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.speed-ctl b { font-size: 24px; font-weight: 900; color: var(--muted); min-width: 34px; text-align: center; }
+.speed-ctl button { width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--accent-soft);
+  color: var(--accent-ink); font: inherit; font-size: 20px; font-weight: 900; cursor: pointer; line-height: 1; }
+.speed-ctl button:hover { background: #fbdcbf; }
+#lamaWrap:is(:fullscreen, .is-full) .speed-ctl b, #lamaWrap:is(:fullscreen, .is-full) .hud-lives .bumps { color: #fff; }
+#lamaWrap:is(:fullscreen, .is-full) .hud-speed small { color: #cbbfe0; }
+.lama-bar { fill: var(--cur); opacity: .16; stroke: var(--cur); stroke-opacity: .45; stroke-width: 1; }
+.lama-bar-mid { fill: var(--cur); opacity: .35; }
+.gnote.in-bar .ghead { filter: drop-shadow(0 0 2px rgba(47, 111, 220, .8)); }
+.lama-buttons { display: flex; gap: 8px; }
+.lama-opt { margin-top: 12px; }
+.lama-buttons .btn { width: auto; padding: 8px 14px; font-size: 15px; }
+#lStart { display: none; } /* buiten volledig scherm staat de grote Start-knop er al */
+
+/* volledig scherm (of, waar dat niet kan, het hele venster): HUD bovenaan, spel zo groot mogelijk in 16:9 */
+#lamaWrap:is(:fullscreen, .is-full) { margin: 0; border: 0; border-radius: 0; padding: 10px 16px 16px; background: #1d1630;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#lamaWrap.is-full { position: fixed; inset: 0; z-index: 1000; }
+#lamaWrap:is(:fullscreen, .is-full) .game-hud { width: 100%; max-width: calc((100dvh - 110px) * 16 / 9); }
+#lamaWrap:is(:fullscreen, .is-full) .lbl { color: #cbbfe0; }
+#lamaWrap:is(:fullscreen, .is-full) .hud-small b { color: #fff; }
+#lamaWrap:is(:fullscreen, .is-full) .hud-msg { color: #ffe066; }
+#lamaWrap:is(:fullscreen, .is-full) #lStart { display: inline-flex; }
+#lamaWrap:is(:fullscreen, .is-full) .lama-stage { width: min(100%, calc((100dvh - 110px) * 16 / 9)); }
+body.lama-full { overflow: hidden; }
+.gnote.is-missed .ghead { fill: var(--missed); }
+.gnote.is-missed .gstem, .gnote.is-missed .gledger { stroke: var(--missed); }
+.gnote.is-missed .gtag { fill: var(--bad); }
+
 /* ---------- Liedjesbibliotheek ---------- */
 .library { margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
 .library .hint { margin-top: 8px; }
@@ -270,3 +314,10 @@ input[type=range] { accent-color: var(--accent); }
 .btn.calib { margin-top: 8px; }
 .btn.calib.running { background: var(--ink); color: #fff; }
 #calibInfo .big { display: block; font-size: 22px; font-weight: 900; color: var(--accent-ink); margin: 4px 0; }
+
+/* te laat (in de maat gespeeld, maar na het venster) */
+.score g.is-late path, .score g.is-late rect { fill: #e8a23a !important; stroke: #e8a23a !important; }
+.score g.is-late .lbl-finger, .score g.is-late .lbl-name { fill: #c47d12; }
+.badge.late { background: #e8a23a; }
+.res.late b { color: #c47d12; }
+.dot.late { background: #e8a23a; }

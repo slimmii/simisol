@@ -1,0 +1,25 @@
+{
+  "image": "llama-spritesheet.png",
+  "frameWidth": 40,
+  "frameHeight": 40,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "walk": {
+      "row": 1,
+      "frames": 6,
+      "fps": 10,
+      "loop": true
+    },
+    "jump": {
+      "row": 2,
+      "frames": 6,
+      "fps": 10,
+      "loop": false
+    }
+  }
+}
