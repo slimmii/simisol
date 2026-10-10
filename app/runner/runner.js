@@ -24,7 +24,8 @@
     const i = new Image();
     i.onload = () => res(i);
     i.onerror = () => rej(new Error('kan ' + name + ' niet laden'));
-    i.src = '../img/lama/' + name + '.png';
+    const file = { bg_scenery: 'bg/weide_scenery.webp', bg_ground: 'bg/weide_ground.webp' }[name] || name + '.png'; // de weide uit de lama-reis
+    i.src = '../img/lama/' + file;
   });
 
   // ---------- spelstatus ----------

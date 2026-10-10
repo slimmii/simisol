@@ -117,6 +117,9 @@
           </select>
         </div>
         <label class="switch lama-opt"><input type="checkbox" id="bigNameToggle" checked><span></span>Grote notennaam</label>
+        <p class="hint lama-opt">Soms hangt er een <b>munt</b> 🪙 in de lucht in plaats van een monster. Speel die
+          noot en de lama springt en vangt ze. Mis je ze, dan vliegt ze weg (botsen doe je niet). Met munten koop je
+          in de <b>🛍️ Winkel</b> hoedjes, brillen, vleugels, kleurtjes en meer voor de lama.</p>
       </div>
 
       <hr>
@@ -194,6 +197,8 @@
         <div class="game-hud">
           <div class="hud-streak"><span class="lbl">Punten</span><b id="lScore">0</b></div>
           <div class="hud-small"><span class="lbl">Record</span><b id="lBest">0</b></div>
+          <div class="hud-small hud-coins" title="Munten vang je in de lucht"><span class="lbl">Munten</span>
+            <b><img src="img/lama/coin.png" alt=""><span id="lCoins">0</span></b></div>
           <div class="hud-lives"><span class="lbl" id="lLivesLbl">Levens</span>
             <span id="lLives"></span>
           </div>
@@ -204,10 +209,30 @@
           <div class="hud-msg" id="lMsg"></div>
           <div class="lama-buttons">
             <button class="btn primary" id="lStart">▶ Start</button>
+            <button class="btn secondary" id="lShop" title="Lama aankleden">🛍️ Winkel</button>
             <button class="btn secondary" id="lFull" title="Volledig scherm (F)">⛶ Volledig scherm</button>
           </div>
         </div>
         <div class="lama-stage" id="lamaStage"></div>
+
+        <dialog class="shop" id="lamaShop">
+          <div class="shop-head">
+            <h2>🛍️ Lama-winkel</h2>
+            <div class="shop-coins"><img src="img/lama/coin.png" alt=""><b>0</b><small></small></div>
+            <button class="shop-x" id="shopRandom" title="Willekeurig aankleden (met wat je hebt)">🎲</button>
+            <button class="shop-x" id="shopClose" title="Sluiten (Esc)">✕</button>
+          </div>
+          <div class="shop-test hidden">🧪 <b>Testmodus</b>: alles is van jou en niets wordt bewaard.
+            <button id="shopTestCoins">+10 munten</button><button id="shopTestOff">Alles uit</button></div>
+          <div class="shop-body">
+            <div class="shop-preview"><canvas></canvas>
+              <p>Klik op iets om het te passen.</p></div>
+            <div class="shop-side">
+              <nav class="shop-tabs"></nav>
+              <div class="shop-grid"></div>
+            </div>
+          </div>
+        </dialog>
       </div>
 
       <div class="score-wrap" id="scoreWrap">

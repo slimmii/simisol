@@ -3,7 +3,11 @@
 // waarin je de noot moet spelen. Speel je ze juist terwijl ze in de balk staat, dan springt de
 // lama meteen over het monster (+1 punt). Fout gespeeld, of de noot is de balk uit: het monster
 // botst tegen de lama (-1 leven). Na 3 botsingen is het spel uit.
+// Af en toe hangt er in plaats van een monster een munt in de lucht: speel die noot en de lama springt
+// en vangt de munt (voor de winkel). Mis je ze, dan vliegt ze weg; botsen doe je niet.
 import { parseNote, soundingMidi, solfege, solfegeOf, describePosition } from './notes.js';
+import { loadLlama, drawLlama, drawParticle, trailParticles, trailRate } from './lama-style.js';
+import { World } from './lama-world.js';
 
 const VF = window.Vex.Flow;
 const SVGNS = 'http://www.w3.org/2000/svg';
@@ -11,8 +15,7 @@ const ASSETS = 'img/lama/';
 
 // Spelwereld in canvas-eenheden (het canvas wordt geschaald naar de breedte van de pagina).
 const W = 960, H = 540;
-const BG_SCALE = H / 672; // bg_scenery + bg_ground zijn de boven-/onderstrook van een 1584x672 beeld
-const GROUND_TOP = 594 * BG_SCALE;
+const BG_SCALE = H / 672; // achtergrond + bodem van elk landschap zijn de boven-/onderstrook van een 1584x672 beeld
 const GROUND_Y = 606 * BG_SCALE; // hier staan de pootjes
 const PLAYER_X = 190;
 const PLAYER_H = 112;
@@ -31,6 +34,9 @@ const LETTER_STEP = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
 const diatonic = (p) => { const n = parseNote(p); return n.octave * 7 + LETTER_STEP[n.letter]; };
 const E4 = 4 * 7 + 2; // onderste lijn
 const B4 = 4 * 7 + 6; // middelste lijn
+
+const COIN_Y = GROUND_Y - 165; // hoogte van de munten: daar zit de lama bovenaan haar sprong
+const COIN_CHANCE = 1 / 3; // kans op een munt na minstens één monster: gemiddeld 1 op 4 noten (nooit twee na elkaar)
 
 const MONSTERS = {
   cactus: { h: 74, lift: 0 },
@@ -59,20 +65,29 @@ export class LamaGame {
     this.barBeats = 0.45; // breedte van het speelvenster in tellen
     this.best = 0;
     this.onBest = null; // (best) => void, om het record te bewaren
+    this.onCoin = null; // () => void, als de lama een munt vangt
+    this.outfit = {}; // wat de lama draagt (zie lama-style.js)
+    this.trailT = 0;
     this.img = {};
+    this.world = new World({ W, H, top: 0 });
+    this.dist = W; // afgelegde weg (loopt ook in het startscherm); zo begint ook de achtergrond in de weide
+    this.biomeNow = null;
+    this.banner = null; // naam van een nieuw landschap, even in beeld
     this.ready = this.load();
     this.reset();
   }
 
   async load() {
-    const names = ['bg_scenery', 'bg_ground', 'llama_walk', 'llama_jump', 'cactus', 'bat', 'armadillo'];
-    await Promise.all(names.map((n) => new Promise((res, rej) => {
+    const names = ['cactus', 'bat', 'armadillo'];
+    const [A] = await Promise.all([loadLlama(), this.world.load(), ...names.map((n) => new Promise((res, rej) => {
       const i = new Image();
       i.onload = () => { this.img[n] = i; res(); };
       i.onerror = () => rej(new Error(`kan ${n} niet laden`));
       i.src = ASSETS + n + '.png';
-    })));
-    this.meta = await (await fetch(ASSETS + 'llama.json')).json();
+    }))]);
+    this.A = A;
+    Object.assign(this.img, A.img);
+    this.meta = A.meta;
   }
 
   setPool(pool) {
@@ -83,7 +98,6 @@ export class LamaGame {
   reset() {
     this.notes = []; // {p, beat, kind, finger, state: null|'hit'|'wrong'|'missed', el, ...}
     this.beat = 0;
-    this.dist = this.dist || 0; // afgelegde weg van de achtergrond (loopt ook in het startscherm)
     this.score = 0;
     this.lives = this.maxLives;
     this.bumps = 0;
@@ -92,6 +106,8 @@ export class LamaGame {
     this.hist = [];
     this.prev = [];
     this.lastFinger = 'i';
+    this.sinceCoin = 0;
+    this.coins = 0; // munten gevangen in dit spel
     this.lastHit = null;
     this.player = { y: GROUND_Y, jump: null, queue: [], landT: 1, walk: 0, hurt: 0 }; // queue: noten om over te springen
     this.particles = [];
@@ -117,9 +133,11 @@ export class LamaGame {
     while (last < this.beat + visible) {
       last += 1;
       this.lastFinger = this.lastFinger === 'm' ? 'i' : 'm';
+      const coin = last >= LEAD_BEATS + 2 && this.sinceCoin >= 1 && Math.random() < COIN_CHANCE;
+      this.sinceCoin = coin ? 0 : this.sinceCoin + 1;
       this.notes.push({
         p: this.nextPitch(), beat: last, state: null, el: null, finger: this.lastFinger,
-        kind: kinds[Math.floor(Math.random() * kinds.length)], t: Math.random() * 6,
+        kind: coin ? 'coin' : kinds[Math.floor(Math.random() * kinds.length)], t: Math.random() * 6,
       });
     }
   }
@@ -298,7 +316,7 @@ export class LamaGame {
     const now = this.clock();
     const dt = this.lastT == null ? 0 : Math.max(0, Math.min(0.1, now - this.lastT));
     this.lastT = now;
-    for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 500 * dt; p.life -= dt; }
+    for (const p of this.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g ?? 500) * dt; p.life -= dt; }
     this.particles = this.particles.filter((p) => p.life > 0);
     for (const f of this.floaters) { f.y -= 40 * dt; f.life -= dt; }
     this.floaters = this.floaters.filter((f) => f.life > 0);
@@ -336,7 +354,21 @@ export class LamaGame {
       else pl.y = GROUND_Y - 4 * pl.jump.h * u * (1 - u);
     }
     pl.landT += dt;
+    // spoor achter de lama (zie de winkel)
+    if (this.outfit.trail && !this.over) {
+      const r = trailRate(this.outfit.trail);
+      this.trailT = Math.min(this.trailT + dt, 0.3);
+      while (this.trailT > r) {
+        this.trailT -= r;
+        this.particles.push(...trailParticles(this.outfit.trail, PLAYER_X - 36, pl.y - 50, this.running ? this.speed() : 60));
+      }
+    }
     for (const n of this.notes) n.t += dt;
+    // een nieuw landschap onder de pootjes: even de naam tonen
+    const k = this.world.indexAt(this.dist + PLAYER_X);
+    if (this.biomeNow != null && k !== this.biomeNow && this.running) this.banner = { text: this.world.biome(k).name, life: 3 };
+    this.biomeNow = k;
+    if (this.banner) { this.banner.life -= dt; if (this.banner.life <= 0) this.banner = null; }
     if (!this.over) pl.walk += dt * Math.max(0.5, this.running ? this.bpm / 30 : 0.5);
 
     this.render(now);
@@ -344,16 +376,28 @@ export class LamaGame {
   }
 
   // Luchttijd: de lama blijft in de lucht tot het monster van noot n helemaal onder haar door is.
+  // Bij een munt: zo lang dat ze bovenaan haar sprong is als de munt bij haar is.
   jumpTime(n) {
     const d = this.xOf(n) - PLAYER_X;
+    if (n.kind === 'coin') return Math.min(Math.max((2 * d) / this.speed(), 0.4), 0.95 * this.spb() + 0.3);
     return Math.min(Math.max((d + CONTACT_PX + JUMP_MARGIN) / this.speed(), 0.35), 0.95 * this.spb() + 0.3);
   }
 
   collide(now) {
     for (const n of this.notes) {
-      if (n.bumped || n.state === 'hit') continue;
       const x = this.xOf(n);
+      if (n.kind === 'coin' && n.state === 'hit' && !n.caught && x <= PLAYER_X + 20) this.catchCoin(n, x);
+      if (n.bumped || n.state === 'hit') continue;
       if (x > PLAYER_X + CONTACT_PX) break;
+      if (n.kind === 'coin') { // een munt botst niet: gemist is gemist
+        if (n.state === 'wrong') { n.bumped = true; continue; }
+        if (n.contactAt == null) n.contactAt = now;
+        if (now - n.contactAt < GRACE) continue;
+        n.state = 'missed'; n.wrongText = 'gemist'; n.bumped = true; n.lostT = n.t;
+        this.say('Munt gemist…');
+        this.sendExpect();
+        continue;
+      }
       if (n.contactAt == null) n.contactAt = now;
       // even wachten: de herkenning van een tokkel die nét op tijd was, heeft wat tijd nodig
       if (n.state !== 'wrong' && now - n.contactAt < GRACE) continue;
@@ -362,6 +406,16 @@ export class LamaGame {
       this.sendExpect();
     }
     while (this.notes.length && this.xOf(this.notes[0]) < -120) this.notes.shift().el?.remove();
+  }
+
+  catchCoin(n, x) {
+    n.caught = true;
+    this.coins++;
+    this.onCoin?.();
+    this.floaters.push({ x: x + 30, y: COIN_Y - 40, text: '+1', life: 1.2, coin: true });
+    this.sparkle(x, COIN_Y, '#ffd84a');
+    this.sparkle(x, COIN_Y, '#fff6a8');
+    this.say(this.coins === 1 ? 'Een munt! 🪙 Daarmee koop je iets in de winkel.' : `Munt gevangen! (${this.coins} dit spel)`);
   }
 
   bump(n) {
@@ -410,6 +464,13 @@ export class LamaGame {
     // Voorbij de balk en het monster is al bij de lama: te laat, het gaat botsen.
     // (Net na de balk, maar vóór de botsing, telt nog: een kleine onzichtbare marge.)
     if (d < CONTACT_PX && ev.midi === soundingMidi(tgt.p)) return;
+    if (ev.midi === soundingMidi(tgt.p) && tgt.kind === 'coin') { // springen om de munt te vangen, geen punt
+      tgt.state = 'hit';
+      this.lastHit = { midi: ev.midi, time: ev.time };
+      this.player.queue.push(tgt);
+      this.sendExpect();
+      return;
+    }
     if (ev.midi === soundingMidi(tgt.p)) {
       tgt.state = 'hit';
       this.lastHit = { midi: ev.midi, time: ev.time };
@@ -429,7 +490,8 @@ export class LamaGame {
     tgt.state = 'wrong';
     tgt.played = solfege(ev.midi + 12);
     tgt.wrongText = `fout: ${tgt.played}`;
-    this.say(`Fout: ${tgt.played}. De lama gaat botsen…`);
+    if (tgt.kind === 'coin') { tgt.lostT = tgt.t; this.say(`Fout: ${tgt.played}. De munt vliegt weg…`); }
+    else this.say(`Fout: ${tgt.played}. De lama gaat botsen…`);
     this.sendExpect();
   }
 
@@ -441,18 +503,25 @@ export class LamaGame {
     g.save();
     if (this.shake > 0) g.translate((Math.random() - 0.5) * 10 * this.shake, (Math.random() - 0.5) * 6 * this.shake);
     g.imageSmoothingEnabled = true;
-    tile(g, this.img.bg_scenery, dist * 0.25, -6, this.img.bg_scenery.height * BG_SCALE + 6);
-    tile(g, this.img.bg_ground, dist, GROUND_TOP, H - GROUND_TOP + 1);
+    this.world.draw(g, dist);
 
     for (const n of this.notes) {
       const x = this.xOf(n);
       if (x > W + 80 || x < -120) continue;
+      if (n.kind === 'coin') { this.drawCoin(n, x); continue; }
       if (n.poof) { this.poofMonster(n, x); continue; }
       this.drawMonster(n, x);
     }
+    if (this.banner && this.running) {
+      g.globalAlpha = Math.min(1, this.banner.life, (3 - this.banner.life) * 3);
+      label(g, this.banner.text, W / 2, 340, 38, '#fff6c8');
+      g.globalAlpha = 1;
+    }
+    for (const p of this.particles) if (p.kind) drawParticle(g, p, this.img); // spoor: achter de lama
     this.drawLlama(now);
     if (this.bigName && this.running) this.drawBigName();
     for (const p of this.particles) {
+      if (p.kind) continue;
       g.globalAlpha = Math.max(0, p.life * 2.5);
       g.fillStyle = p.color;
       g.fillRect(p.x - p.s / 2, p.y - p.s / 2, p.s, p.s);
@@ -460,7 +529,8 @@ export class LamaGame {
     g.globalAlpha = 1;
     for (const f of this.floaters) {
       g.globalAlpha = Math.min(1, f.life * 2);
-      label(g, f.text, f.x, f.y, 30, '#2f9e57');
+      if (f.coin) g.drawImage(this.img.coin, f.x - 48, f.y - 18, 34, 36);
+      label(g, f.text, f.x, f.y, 30, f.coin ? '#ffd84a' : '#2f9e57');
     }
     g.globalAlpha = 1;
     g.restore();
@@ -476,7 +546,8 @@ export class LamaGame {
         label(g, 'Speel de noot, dan springt de lama!', W / 2, 270, 34, '#fff');
         label(g, this.immortal() ? 'Fout of te laat = botsen. Onsterfelijk: je kan niet verliezen.'
           : `Fout of te laat = botsen. Je hebt ${this.maxLives} ${this.maxLives === 1 ? 'leven' : 'levens'}.`, W / 2, 320, 22, '#ffe066');
-        label(g, 'Klik op ▶ Start', W / 2, 365, 22, '#fff');
+        label(g, 'Een munt in de lucht? Speel die noot en de lama vangt ze!', W / 2, 360, 20, '#ffd84a');
+        label(g, 'Klik op ▶ Start', W / 2, 400, 22, '#fff');
       }
     }
   }
@@ -489,10 +560,11 @@ export class LamaGame {
     const x = 560, y = 232;
     const name = solfegeOf(t.p);
     const hot = this.inBar(this.xOf(t) - PLAYER_X);
+    const ink = t.kind === 'coin' ? '#c98a00' : '#2f6fdc'; // een munt: goud in plaats van blauw
     g.font = '900 64px Nunito, system-ui, sans-serif';
     const w = Math.max(170, g.measureText(name).width + 70);
-    g.fillStyle = hot ? '#2f6fdc' : 'rgba(255, 255, 255, .88)';
-    g.strokeStyle = hot ? '#ffffff' : 'rgba(47, 111, 220, .55)';
+    g.fillStyle = hot ? ink : 'rgba(255, 255, 255, .88)';
+    g.strokeStyle = hot ? '#ffffff' : ink + '8c';
     g.lineWidth = 3;
     g.beginPath();
     g.roundRect(x - w / 2, y - 48, w, 96, 22);
@@ -500,7 +572,7 @@ export class LamaGame {
     g.stroke();
     g.textAlign = 'center';
     g.textBaseline = 'middle';
-    g.fillStyle = hot ? '#ffffff' : '#2f6fdc';
+    g.fillStyle = hot ? '#ffffff' : ink;
     g.fillText(name, x, y - 8);
     g.font = '800 16px Nunito, system-ui, sans-serif';
     g.fillStyle = hot ? '#dce8ff' : '#7d7067';
@@ -524,6 +596,25 @@ export class LamaGame {
     if (n.state === 'wrong') label(this.g, '!', x, cy - h / 2 - 16, 30, '#dc3b3b');
   }
 
+  // Munt in de lucht: draait en zweeft. Gemist of fout: ze vliegt omhoog weg.
+  drawCoin(n, x) {
+    if (n.caught) return;
+    const g = this.g, im = this.img.coin;
+    let y = COIN_Y + Math.sin(n.t * 3) * 5, alpha = 1;
+    if (n.lostT != null) {
+      const u = n.t - n.lostT;
+      y -= u * 260; alpha = Math.max(0, 1 - u * 1.5);
+      if (!alpha) return;
+    }
+    const h = 42, w = h * (im.width / im.height) * (0.3 + 0.7 * Math.abs(Math.cos(n.t * 2.5)));
+    g.save();
+    g.globalAlpha = alpha;
+    g.shadowColor = 'rgba(255, 220, 80, .9)';
+    g.shadowBlur = 14;
+    g.drawImage(im, x - w / 2, y - h / 2, w, h);
+    g.restore();
+  }
+
   poofMonster(n, x) {
     if (n.poofed) return;
     n.poofed = true;
@@ -539,13 +630,13 @@ export class LamaGame {
     if (pl.jump) {
       const u = (now - pl.jump.t0) / pl.jump.D;
       const f = u < 0.5 ? j.takeoff + (u / 0.5) * (j.apex - j.takeoff) : j.apex + ((u - 0.5) / 0.5) * (j.land - j.apex);
-      return ['llama_jump', j, Math.round(f)];
+      return ['jump', j, Math.round(f)];
     }
     if (pl.landT < 0.2) {
       const n = Math.max(1, j.frames - 1 - j.land);
-      return ['llama_jump', j, Math.min(j.frames - 1, j.land + Math.floor((pl.landT / 0.2) * n))];
+      return ['jump', j, Math.min(j.frames - 1, j.land + Math.floor((pl.landT / 0.2) * n))];
     }
-    return ['llama_walk', m.walk, Math.floor(pl.walk * m.walk.fps) % m.walk.frames];
+    return ['walk', m.walk, Math.floor(pl.walk * m.walk.fps) % m.walk.frames];
   }
 
   drawLlama(now) {
@@ -553,9 +644,7 @@ export class LamaGame {
     if (pl.hurt > 0 && Math.floor(pl.hurt * 12) % 2) return;
     const [sheet, sm, i] = this.llamaFrame(now);
     const s = PLAYER_H / this.meta.standH;
-    const dw = sm.cellW * s, dh = sm.cellH * s;
-    this.g.drawImage(this.img[sheet], i * sm.cellW, 0, sm.cellW, sm.cellH,
-      Math.round(PLAYER_X - sm.anchorX * s), Math.round(pl.y - dh), Math.round(dw), Math.round(dh));
+    drawLlama(this.g, this.A, sheet, i, Math.round(PLAYER_X - sm.anchorX * s), Math.round(pl.y - sm.cellH * s), s, this.outfit, now);
   }
 
   paintNotes(now) {
@@ -572,6 +661,7 @@ export class LamaGame {
       n.el.classList.toggle('is-wrong', n.state === 'wrong');
       n.el.classList.toggle('is-missed', n.state === 'missed');
       n.el.classList.toggle('is-hit', n.state === 'hit');
+      n.el.classList.toggle('is-coin', n.kind === 'coin');
       const tagText = n.state === 'wrong' || n.state === 'missed' ? n.wrongText : early ? 'wacht…' : '';
       if (n.tag.textContent !== tagText) n.tag.textContent = tagText;
     }
@@ -617,11 +707,6 @@ export class LamaGame {
   }
 
   say(msg) { this.o.hud.msg.textContent = msg; }
-}
-
-function tile(g, im, offset, y, h) {
-  const w = (im.width * h) / im.height;
-  for (let x = -(offset % w); x < W; x += w) g.drawImage(im, Math.floor(x), y, Math.ceil(w) + 1, h);
 }
 
 function label(g, str, x, y, size, color) {

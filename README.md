@@ -51,6 +51,17 @@ De app staat dan op `https://<gebruiker>.github.io/<repo>/`. Via https werkt de 
   **⛶ Volledig scherm** (of de toets F) speel je op het hele scherm. Je **record** wordt per combinatie
   van noten onthouden; de schuifregelaar zet de snelheid in noten per minuut.
   (`app/runner/` is een losse demo die je met de toetsen speelt.)
+  De lama **reist**: om de zoveel stappen komt ze in een ander landschap (weide, herfstbos, sneeuwland,
+  sterrennacht, snoepland, strand, jungle, woestijn, vulkaanland). Het nieuwe landschap schuift zacht binnen,
+  eerst de bodem, dan de verre bergen. De beelden staan in `art/llama-runner/backgrounds/` en worden met
+  `tools/make_backgrounds.py` omgezet naar `app/img/lama/bg/`.
+  Soms hangt er in plaats van een monster een **munt** in de lucht (gouden noot). Speel die noot en de lama
+  springt en **vangt** de munt; mis je ze, dan vliegt ze weg, maar botsen doe je niet. In de **🛍️ Winkel** koop je
+  met munten spulletjes voor de lama: een vachtkleur, iets op het hoofd (de bloem, hoedjes, kroon…), een bril, iets rond
+  de hals, iets op de rug (vleugels, gitaar, raket…) en een spoor (glitters, muzieknoten, regenboog…).
+  Per plek draagt de lama één ding; klik op iets om het eerst te passen. Verborgen **testmodus**: zet
+  `?lamatest` achter de url (bv. `index.html?lamatest`). Dan is alles van jou om te proberen, kan je munten bijmaken en wordt er niets bewaard.
+  De sprites zonder bloem en de ankerpunten per frame maak je met `tools/llama_unflower.py`.
 
 Overal kan je de metronoom aan/uit zetten en het tempo met de schuifregelaar kiezen
 (bij een opname verandert dat de afspeelsnelheid, zonder dat de toonhoogte verandert).

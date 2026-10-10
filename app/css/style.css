@@ -292,11 +292,62 @@ input[type=range] { accent-color: var(--accent); }
 #lamaWrap:is(:fullscreen, .is-full) .game-hud { width: 100%; max-width: calc((100dvh - 110px) * 16 / 9); }
 #lamaWrap:is(:fullscreen, .is-full) .lbl { color: #cbbfe0; }
 #lamaWrap:is(:fullscreen, .is-full) .hud-small b { color: #fff; }
+#lamaWrap:is(:fullscreen, .is-full) .shop { color: var(--ink); }
 #lamaWrap:is(:fullscreen, .is-full) .hud-msg { color: #ffe066; }
 #lamaWrap:is(:fullscreen, .is-full) #lStart { display: inline-flex; }
 #lamaWrap:is(:fullscreen, .is-full) .lama-stage { width: min(100%, calc((100dvh - 110px) * 16 / 9)); }
 body.lama-full { overflow: hidden; }
+.hud-coins b { display: flex; align-items: center; gap: 4px; }
+.hud-coins img { width: 24px; height: 26px; }
+.hud-coins.bump b { animation: coinBump .6s; }
+@keyframes coinBump { 30% { transform: scale(1.35); color: #e8a200; } }
+
+/* Lama-winkel */
+.shop { width: min(980px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 0;
+  border-radius: 18px; background: var(--paper); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: auto; }
+.shop::backdrop { background: rgba(29, 22, 48, .55); }
+.shop-head { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; background: var(--paper); z-index: 1; }
+.shop-head h2 { margin: 0; font-size: 22px; font-weight: 900; }
+.shop-coins { display: flex; align-items: center; gap: 6px; flex: 1; flex-wrap: wrap; }
+.shop-coins img { width: 30px; height: 32px; }
+.shop-coins b { font-size: 28px; font-weight: 900; color: #c47d12; }
+.shop-coins small { color: var(--muted); font-weight: 700; font-size: 13px; margin-left: 6px; }
+.shop-x { border: 0; background: var(--accent-soft); color: var(--accent-ink); width: 38px; height: 38px; border-radius: 50%;
+  font: inherit; font-size: 18px; font-weight: 900; cursor: pointer; flex: none; }
+.shop-x:hover { background: #fbdcbf; }
+.shop-test { margin: 10px 18px 0; padding: 8px 12px; border-radius: 10px; background: #ffe9f0; color: #a3164b; font-size: 14px;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.shop-test button { font: inherit; font-weight: 800; border: 0; border-radius: 8px; padding: 4px 10px; background: #fff; color: #a3164b; cursor: pointer; }
+.shop-body { display: grid; grid-template-columns: 300px 1fr; gap: 18px; padding: 16px 18px 18px; }
+@media (max-width: 720px) { .shop-body { grid-template-columns: 1fr; } }
+.shop-preview { position: sticky; top: 76px; align-self: start; }
+.shop-preview canvas { width: 100%; aspect-ratio: 300 / 260; border-radius: 14px; display: block; }
+.shop-preview p { margin: 8px 0 0; color: var(--muted); font-size: 13px; text-align: center; }
+.shop-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.shop-tab { border: 1.5px solid var(--line); background: var(--bg); border-radius: 10px; padding: 6px 12px; font: inherit;
+  font-weight: 800; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.shop-tab.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 10px; }
+.shop-card { border: 2px solid var(--line); border-radius: 12px; padding: 6px 6px 8px; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; cursor: pointer; background: var(--bg); transition: transform .1s, border-color .1s; }
+.shop-card:hover { transform: translateY(-2px); border-color: #f3c9a2; }
+.shop-card.trying { border-color: var(--cur); }
+.shop-card.worn { border-color: var(--good); background: #eaf7ee; }
+.shop-card canvas { width: 100%; max-width: 120px; aspect-ratio: 120 / 112; border-radius: 8px; background: #d9eefc; }
+.shop-card b { font-size: 14px; font-weight: 800; text-align: center; }
+.shop-card button { font: inherit; font-size: 13px; font-weight: 800; border: 0; border-radius: 8px; padding: 4px 10px; cursor: pointer;
+  background: var(--accent-soft); color: var(--accent-ink); display: flex; align-items: center; gap: 4px; min-height: 28px; }
+.shop-card button img { width: 16px; height: 17px; }
+.shop-card button.buy { background: #fff4d6; color: #8a5a00; }
+.shop-card button.buy.sure { background: #e8a200; color: #fff; }
+.shop-card button.on { background: var(--good); color: #fff; }
+.shop-card button:disabled { opacity: .45; cursor: default; }
+.shop-card button.on:disabled { opacity: 1; }
+.shop-card:not(.owned) canvas { filter: saturate(.9); }
 .gnote.is-missed .ghead { fill: var(--missed); }
+.gnote.is-coin:not(.is-missed):not(.is-wrong) .ghead { fill: #e8a200; }
+.gnote.is-coin:not(.is-missed):not(.is-wrong) .gstem, .gnote.is-coin:not(.is-missed):not(.is-wrong) .gledger { stroke: #e8a200; }
 .gnote.is-missed .gstem, .gnote.is-missed .gledger { stroke: var(--missed); }
 .gnote.is-missed .gtag { fill: var(--bad); }
 

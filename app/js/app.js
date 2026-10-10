@@ -7,6 +7,7 @@ import { loadSongs, importZip, clearLibrary } from './library.js';
 import { renderGuitar } from './guitar.js';
 import { Game } from './game.js';
 import { LamaGame } from './lama.js';
+import { initShop, ALL_ITEM_IDS } from './lama-shop.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -37,6 +38,7 @@ const settings = Object.assign(
     lamaBest: {}, // record van het lama-spel, per combinatie van noten
     lamaBigName: true, // naam van de noot groot tonen in het lama-spel
     lamaLives: 3, // 0 = onsterfelijk
+    lamaShop: { coins: 0, owned: [], outfit: {} }, // gevangen munten en wat de lama draagt
   },
   safeRead(SETTINGS_KEY),
 );
@@ -563,6 +565,49 @@ const lama = new LamaGame({
 // Record per combinatie van noten én aantal levens (3 levens houdt de oude sleutel). Onsterfelijk: geen record.
 const lamaBestKey = () => selectionKey() + (settings.lamaLives === 3 ? '' : `|${settings.lamaLives}`);
 lama.onBest = (best) => { settings.lamaBest[lamaBestKey()] = best; save(); };
+
+// Winkel. Verborgen testmodus: zet ?lamatest achter de url. Dan is alles van jou (om alle spulletjes te
+// bekijken) en wordt er niets bewaard: je echte munten en kleren blijven zoals ze waren.
+const LAMA_TEST = new URLSearchParams(location.search).has('lamatest');
+// Oude portemonnee (1 munt per 50 punten, prijzen 1-3) omzetten naar gevangen munten (prijzen 5-15).
+if (settings.lamaShop.coins == null) {
+  const { points = 0, spent = 0 } = settings.lamaShop;
+  settings.lamaShop = { coins: Math.max(0, Math.floor(points / 50) - spent) * 5, owned: settings.lamaShop.owned || [], outfit: settings.lamaShop.outfit || {} };
+  save();
+}
+const lamaWallet = LAMA_TEST
+  ? { coins: 0, owned: [...ALL_ITEM_IDS], outfit: { ...settings.lamaShop.outfit } }
+  : settings.lamaShop;
+function updateCoins(bump = false) {
+  $('lCoins').textContent = lamaWallet.coins;
+  lama.outfit = lamaWallet.outfit;
+  if (bump) {
+    const el = $('lCoins').closest('.hud-coins');
+    el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  }
+}
+lama.onCoin = () => {
+  lamaWallet.coins++;
+  updateCoins(true);
+  save();
+};
+const shop = initShop({
+  dialog: $('lamaShop'),
+  wallet: () => lamaWallet,
+  save,
+  onChange: () => updateCoins(),
+  test: LAMA_TEST,
+});
+function openShop() {
+  stop();
+  shop.open();
+}
+$('lamaShop').addEventListener('close', () => shop.closed());
+$('shopClose').onclick = () => $('lamaShop').close();
+$('shopRandom').onclick = () => shop.randomize();
+$('shopTestCoins').onclick = () => { lamaWallet.coins += 10; updateCoins(true); shop.render(); };
+$('shopTestOff').onclick = () => { lamaWallet.outfit = {}; updateCoins(); shop.render(); };
+updateCoins();
 
 // Snelheid: zelfde waarde als de schuifregelaar, ook te veranderen in de spelbalk (en met ← →).
 function setLamaSpeed(v) {
@@ -1179,7 +1224,9 @@ function bindUI() {
   $('demoBtn').onclick = () => (run?.demo ? stop() : playDemo());
   $('lStart').onclick = (e) => { e.currentTarget.blur(); $('startBtn').click(); };
   $('lFull').onclick = (e) => { e.currentTarget.blur(); toggleLamaFullscreen(); };
+  $('lShop').onclick = (e) => { e.currentTarget.blur(); openShop(); };
   document.addEventListener('keydown', (e) => {
+    if ($('lamaShop').open) return; // in de winkel: geen sneltoetsen voor het spel
     if (e.code === 'Space' && !['INPUT', 'SELECT', 'BUTTON'].includes(document.activeElement?.tagName)) {
       e.preventDefault();
       $('startBtn').click();
