@@ -10,7 +10,7 @@ import { LamaGame } from './lama.js';
 import { initShop, ALL_ITEM_IDS } from './lama-shop.js';
 import { BIOMES } from './lama-world.js';
 import {
-  STAGES, GATE_HITS, BOSS_COINS, newJourney, unlockedNotes, isLastStage, accuracy, ready, record, starsOf, totalStars, bossFor, advance,
+  STAGES, GATE_HITS, BOSS_COINS, STAR_MIN_NOTES, newJourney, unlockedNotes, isLastStage, accuracy, ready, record, starsOf, totalStars, bossFor, advance,
 } from './lama-journey.js';
 
 const $ = (id) => document.getElementById(id);
@@ -568,7 +568,7 @@ const lama = new LamaGame({
 });
 // Record per combinatie van noten (op de reis: één record) én aantal levens (3 levens houdt de oude sleutel).
 // Onsterfelijk: geen record.
-const lamaBestKey = () => (onJourney() ? 'reis' : selectionKey()) + (settings.lamaLives === 3 ? '' : `|${settings.lamaLives}`);
+const lamaBestKey = () => (onJourney() ? `reis:${STAGES[journey.at].biome}` : selectionKey()) + (settings.lamaLives === 3 ? '' : `|${settings.lamaLives}`);
 lama.onBest = (best) => { settings.lamaBest[lamaBestKey()] = best; save(); };
 
 // Winkel. Verborgen testmodus: zet ?lamatest achter de url. Dan is alles van jou (om alle spulletjes te
@@ -607,13 +607,17 @@ lama.onCoin = () => {
 // noten (bv. de leerkracht), alle bereikte landschappen wisselen af, maar er zijn veel minder munten.
 const journey = Object.assign(newJourney(), settings.lamaJourney);
 settings.lamaJourney = journey;
+if (journey.at == null || journey.at > journey.stage) journey.at = journey.stage;
 const onJourney = () => journey.mode === 'reis';
+const atFront = () => journey.at === journey.stage; // in je verste landschap (daar staat de poort)
+// sterren tellen op de reis altijd, bij vrij oefenen pas met minstens 3 noten
+const starsCount = () => onJourney() || lama.pool.length >= STAR_MIN_NOTES;
 const COINS_JOURNEY = 1 / 2, COINS_FREE = 1 / 9; // gemiddeld 1 op 3 noten een munt, bij vrij oefenen 1 op 10
 lama.fresh = journey.fresh;
 lama.onJudge = (note, ok, n) => {
-  record(journey, note, ok, { journey: onJourney(), boss: !!n.boss });
+  record(journey, note, ok, { journey: onJourney() && atFront(), boss: !!n.boss, stars: starsCount() });
   save();
-  if (onJourney() && lama.running && !lama.boss && ready(journey)) {
+  if (onJourney() && atFront() && lama.running && !lama.boss && ready(journey)) {
     const b = bossFor(journey.stage);
     if (lama.world.img[BIOMES[b.stage].id]) lama.queueBoss(b); // pas als dat landschap geladen is
   }
@@ -640,8 +644,13 @@ function updateJourneyUI() {
   $('lamaModeVrij').classList.toggle('on', !onJourney());
   $('lamaJourney').classList.toggle('hidden', !onJourney());
   $('lamaFreeHint').classList.toggle('hidden', onJourney());
+  const few = !onJourney() && lama.pool.length < STAR_MIN_NOTES;
+  $('lamaFreeStars').textContent = few
+    ? `Kies minstens ${STAR_MIN_NOTES} noten om sterren te verdienen (met minder is het te makkelijk).`
+    : 'Je sterren tellen mee.';
+  $('lamaFreeStars').classList.toggle('warn', few);
   $('lStars').textContent = totalStars(j);
-  const gate = !isLastStage(j.stage) && onJourney();
+  const gate = !isLastStage(j.stage) && onJourney() && atFront();
   $('lGateWrap').classList.toggle('hidden', !gate);
   if (gate) $('lGate').textContent = ready(j) ? '👑' : `${Math.min(j.progress, GATE_HITS)}/${GATE_HITS}`;
   const list = $('lamaMap');
@@ -649,10 +658,22 @@ function updateJourneyUI() {
   STAGES.forEach((st, i) => {
     const li = document.createElement('li');
     const state = i < j.stage ? 'done' : i === j.stage ? 'here' : 'locked';
-    li.className = state;
+    li.className = state + (i === j.at ? ' playing' : '');
     const notes = st.notes.map((n) => `<b>${solfegeOf(n)}</b>`).join(' ');
-    li.innerHTML = `<span class="ico">${state === 'done' ? '✅' : state === 'here' ? '🦙' : '🔒'}</span>`
+    li.innerHTML = `<span class="ico">${i === j.at ? '🦙' : state === 'locked' ? '🔒' : state === 'done' ? '✅' : '📍'}</span>`
       + `<span class="nm">${st.name}</span><span class="nt">${i === 0 ? 'start: ' : ''}${notes}</span>`;
+    if (state !== 'locked') { // bereikte landschappen kan je (opnieuw) spelen
+      li.tabIndex = 0;
+      li.title = i === j.at ? 'Hier speel je nu' : i < j.stage ? 'Opnieuw spelen' : 'Terug naar je verste landschap';
+      li.onclick = () => playStage(i);
+      li.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); playStage(i); } };
+    }
+    if (i === j.at && state === 'done') {
+      const p = document.createElement('div');
+      p.className = 'gate';
+      p.innerHTML = '🔁 Je speelt dit landschap opnieuw (sterren en munten tellen). Klik 📍 om verder te reizen.';
+      li.appendChild(p);
+    }
     if (state === 'here') {
       const p = document.createElement('div');
       p.className = 'gate';
@@ -672,13 +693,13 @@ function updateJourneyUI() {
 // Notenknoppen in het lama-spel: sterren per noot; op de reis zijn ze niet te kiezen (nog niet geleerd = slotje).
 function refreshChips() {
   const lamaTab = settings.tab === 'lama';
-  const open = new Set(unlockedNotes(journey.stage));
+  const open = new Set(unlockedNotes(journey.stage)), playing = new Set(unlockedNotes(journey.at));
   document.querySelectorAll('#noteChips .chip').forEach((b) => {
     const n = b.dataset.note;
     const locked = lamaTab && onJourney() && !open.has(n);
     b.classList.toggle('locked', locked);
     b.classList.toggle('auto', lamaTab && onJourney());
-    if (lamaTab && onJourney()) b.classList.toggle('on', open.has(n));
+    if (lamaTab && onJourney()) b.classList.toggle('on', playing.has(n));
     else b.classList.toggle('on', settings.selection.includes(n));
     b.querySelector('.stars')?.remove();
     b.querySelector('.new')?.remove();
@@ -687,6 +708,16 @@ function refreshChips() {
     if (!locked) b.insertAdjacentHTML('beforeend', `<i class="stars">${'★'.repeat(k)}${'☆'.repeat(3 - k)}</i>`);
     if (onJourney() && journey.fresh[n] > 0) b.insertAdjacentHTML('beforeend', '<i class="new">NIEUW</i>');
   });
+}
+
+// Een bereikt landschap (opnieuw) spelen: zijn monsters en de noten die je daar kende.
+function playStage(i) {
+  if (i > journey.stage || i === journey.at) return;
+  stop();
+  journey.at = i;
+  save();
+  configureLama();
+  refreshChips();
 }
 
 function setLamaMode(mode) {
@@ -754,9 +785,12 @@ function configureLama() {
   $('lBest').parentElement.classList.toggle('hidden', lama.immortal());
   lama.coinChance = onJourney() ? COINS_JOURNEY : COINS_FREE;
   // op de reis: je eigen landschap; vrij oefenen: alle landschappen die je al bereikt hebt, om de beurt
-  if (onJourney()) lama.world.stay(journey.stage);
+  if (onJourney()) lama.world.stay(journey.at);
   else lama.world.wander(STAGES.slice(0, journey.stage + 1).map((st) => st.biome), lama.dist);
-  lama.setPool(onJourney() ? unlockedNotes(journey.stage) : PRACTICE_NOTES.filter((n) => settings.selection.includes(n)));
+  lama.setPool(onJourney() ? unlockedNotes(journey.at) : PRACTICE_NOTES.filter((n) => settings.selection.includes(n)));
+  lama.best = lama.immortal() ? 0 : settings.lamaBest[lamaBestKey()] || 0;
+  lama.updateHud();
+  updateJourneyUI();
   lama.updateHud();
 }
 

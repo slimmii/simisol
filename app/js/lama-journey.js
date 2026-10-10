@@ -24,9 +24,11 @@ const RECENT = 20;
 export const BOSS_HITS = 5; // zo vaak moet je elke nieuwe noot spelen om de poortwachter te verslaan
 export const BOSS_COINS = 15;
 export const FRESH = 12; // een nieuwe noot komt de eerste 12 keer extra vaak, met naam erbij
+export const STAR_MIN_NOTES = 3; // bij vrij oefenen tellen sterren pas met minstens zoveel noten (één noot is te makkelijk)
 
 export function newJourney() {
-  return { mode: 'reis', stage: 0, progress: 0, recent: [], stars: {}, fresh: {}, newNotes: [] };
+  // stage = verste landschap; at = het landschap dat je nu speelt (je kan bereikte landschappen opnieuw spelen)
+  return { mode: 'reis', stage: 0, at: 0, progress: 0, recent: [], stars: {}, fresh: {}, newNotes: [] };
 }
 
 export const unlockedNotes = (stage) => STAGES.slice(0, stage + 1).flatMap((s) => s.notes);
@@ -38,11 +40,14 @@ export function ready(j) {
   return !isLastStage(j.stage) && j.progress >= GATE_HITS && j.recent.length >= RECENT / 2 && accuracy(j.recent) >= GATE_ACC;
 }
 
-// Elke beslissing over een noot bijhouden. boss = een noot van de poortwachter (telt niet voor de poort).
-export function record(j, note, ok, { journey, boss }) {
-  const st = (j.stars[note] ||= []);
-  st.push(ok ? 1 : 0);
-  if (st.length > RECENT) st.shift();
+// Elke beslissing over een noot bijhouden. journey = telt voor de poort (op de reis, in je verste landschap);
+// boss = een noot van de poortwachter (telt niet voor de poort); stars = telt voor de sterren.
+export function record(j, note, ok, { journey, boss, stars = true }) {
+  if (stars) {
+    const st = (j.stars[note] ||= []);
+    st.push(ok ? 1 : 0);
+    if (st.length > RECENT) st.shift();
+  }
   if (!journey || boss) return;
   j.recent.push(ok ? 1 : 0);
   if (j.recent.length > RECENT) j.recent.shift();
@@ -67,6 +72,7 @@ export function bossFor(stage) {
 // De poortwachter is verslagen: de nieuwe noten zijn vrij.
 export function advance(j) {
   j.stage++;
+  j.at = j.stage;
   j.progress = 0;
   j.recent = [];
   j.newNotes = [...STAGES[j.stage].notes];
@@ -76,7 +82,7 @@ export function advance(j) {
 // Twee reizen samenvoegen (overzetten naar een ander toestel): de verste stap, per noot de meeste pogingen.
 export function mergeJourney(j, other) {
   if (!other) return;
-  if ((other.s ?? 0) > j.stage) { j.stage = other.s; j.progress = 0; j.recent = []; }
+  if ((other.s ?? 0) > j.stage) { j.stage = Math.min(other.s, STAGES.length - 1); j.at = j.stage; j.progress = 0; j.recent = []; }
   for (const [n, st] of Object.entries(other.st || {})) {
     if (Array.isArray(st) && st.length > (j.stars[n]?.length || 0)) j.stars[n] = st.map((x) => (x ? 1 : 0)).slice(-RECENT);
   }

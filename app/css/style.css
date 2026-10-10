@@ -313,6 +313,12 @@ body.lama-full { overflow: hidden; }
 .lama-map li.locked { color: #b5a99d; }
 .lama-map li.locked .nt b { filter: blur(3px); } /* welke noot je leert, zie je pas als je er bent */
 .lama-map .nm { font-weight: 800; }
+.lama-map li.done, .lama-map li.here { cursor: pointer; }
+.lama-map li.done:hover, .lama-map li.here:not(.playing):hover { background: #f3ece3; }
+.lama-map li.playing { outline: 2px solid var(--accent); }
+.lama-map li.done.playing { background: var(--accent-soft); color: var(--accent-ink); }
+#lamaFreeStars { color: var(--good); }
+#lamaFreeStars.warn { color: var(--bad); }
 .lama-map .nt { font-size: 13px; }
 .lama-map .gate { grid-column: 1 / -1; font-size: 13px; font-weight: 700; }
 .lama-map .gate .gbar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.7); overflow: hidden; margin: 4px 0 2px; }
